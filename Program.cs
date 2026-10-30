@@ -45,7 +45,7 @@ try
                 maxRetryDelay: TimeSpan.FromSeconds(5),
                 errorCodesToAdd: null)));
 
-    // ---------- Identity ----------
+    // ---------- Identity (Lockout Disabled) ----------
     builder.Services
         .AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
@@ -57,9 +57,9 @@ try
 
             options.User.RequireUniqueEmail = true;
 
-           // options.Lockout.MaxFailedAccessAttempts = 5;
-            //options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-            options.Lockout.AllowedForNewUsers = true;
+            // Lockout features completely turned off
+            options.Lockout.AllowedForNewUsers = false;
+            options.Lockout.MaxFailedAccessAttempts = 999;
         })
         .AddEntityFrameworkStores<AppDbContext>()
         .AddClaimsPrincipalFactory<AppUserClaimsPrincipalFactory>()
@@ -147,7 +147,6 @@ try
 
     app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
-    // Enable standard wwwroot files + fallback physical provider if path varies inside container
     app.UseStaticFiles();
 
     var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
@@ -197,7 +196,6 @@ try
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            // Always attempt database migration in production to build required tables
             if (!app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
             {
                 await db.Database.MigrateAsync();
