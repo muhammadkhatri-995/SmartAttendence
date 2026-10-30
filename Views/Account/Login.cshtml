@@ -1,26 +1,26 @@
-﻿@model LoginViewModel
+﻿@model SmartAttendance.Web.ViewModels.LoginViewModel
+
 @{
-    ViewData["Title"] = "Sign in";
+    ViewData["Title"] = "Log in";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var returnUrl = ViewData["ReturnUrl"] as string;
 }
 
 <div class="card shadow-sm auth-card">
     <div class="card-body p-4">
         <h2 class="h4 mb-3">Sign in</h2>
 
-        <form asp-action="Login" asp-route-returnUrl="@(ViewData["ReturnUrl"] as string)"
-              method="post" class="js-loading-form">
+        <form asp-action="Login" asp-route-returnUrl="@returnUrl" method="post" class="js-loading-form">
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
             <div class="form-floating mb-3">
-                <input asp-for="Email" class="form-control" placeholder="name@example.com"
-                       autocomplete="username" autofocus />
+                <input asp-for="Email" class="form-control" placeholder="name@example.com" autocomplete="username" autofocus />
                 <label asp-for="Email">Email</label>
                 <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
 
             <div class="form-floating mb-3">
-                <input asp-for="Password" class="form-control" placeholder="Password"
-                       autocomplete="current-password" />
+                <input asp-for="Password" class="form-control" placeholder="Password" autocomplete="current-password" />
                 <label asp-for="Password">Password</label>
                 <span asp-validation-for="Password" class="text-danger small"></span>
             </div>
