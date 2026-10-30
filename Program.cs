@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Serilog;
 using SmartAttendance.Models;
 using SmartAttendance.Web.Authorization;
@@ -78,8 +79,6 @@ try
             : CookieSecurePolicy.Always;
     });
 
-    // Re-check the user's security stamp every minute, so a deactivated user's
-    // existing session is invalidated quickly (used when we build user deactivation).
     builder.Services.Configure<SecurityStampValidatorOptions>(o =>
         o.ValidationInterval = TimeSpan.FromMinutes(1));
 
@@ -92,13 +91,12 @@ try
         options.AddPolicy(PolicyNames.TeacherPortal,
             p => p.RequireRole(Roles.Teacher, Roles.AttendanceOperator));
 
-        // Secure by default: everything needs a signed-in user unless marked [AllowAnonymous].
         options.FallbackPolicy = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .Build();
     });
 
-    // ---------- Rate limiting (login brute-force protection) ----------
+    // ---------- Rate limiting ----------
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -118,7 +116,7 @@ try
         .SetApplicationName("SmartAttendance")
         .PersistKeysToDbContext<AppDbContext>();
 
-    // ---------- Reverse proxy (Render terminates TLS and forwards over HTTP) ----------
+    // ---------- Reverse proxy (Render) ----------
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -139,7 +137,6 @@ try
 
     var app = builder.Build();
 
-    // Must be first: it restores the real client IP and the https scheme from Render's headers.
     app.UseForwardedHeaders();
 
     if (!app.Environment.IsDevelopment())
@@ -150,16 +147,24 @@ try
 
     app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
-    // No UseHttpsRedirection here: Render already redirects http to https before the request reaches the app.
+    // Enable standard wwwroot files + fallback physical provider if path varies inside container
     app.UseStaticFiles();
+
+    var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+    if (Directory.Exists(wwwrootPath))
+    {
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(wwwrootPath),
+            RequestPath = ""
+        });
+    }
 
     app.UseRouting();
 
     app.UseRateLimiter();
     app.UseAuthentication();
 
-    // TEMPORARY: skip login by auto-signing in as the first Admin user.
-    // Only works in Development, and only when DisableAuth=true.
     if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("DisableAuth"))
     {
         app.Logger.LogWarning("DisableAuth is ON: every request runs as the admin user.");
@@ -185,24 +190,25 @@ try
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
 
-    // ---------- Migrate (optional) and seed. Never crashes startup. ----------
+    // ---------- Migration and Seeding ----------
     using (var scope = app.Services.CreateScope())
     {
         try
         {
-            // Off by default. Set Database__MigrateOnStartup=true to apply migrations automatically.
-            if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            // Always attempt database migration in production to build required tables
+            if (!app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
             {
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 await db.Database.MigrateAsync();
-                Log.Information("Database migrations applied.");
+                Log.Information("Database migrations applied successfully.");
             }
 
             await scope.ServiceProvider.GetRequiredService<DbSeeder>().SeedAsync();
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Database startup failed. Check the connection and that migrations are applied.");
+            Log.Error(ex, "Database startup or migration failed.");
         }
     }
 
