@@ -10,7 +10,6 @@ namespace SmartAttendance.Web.Controllers;
 
 public class AccountController : BaseController
 {
-    // One message for every failure so the form never reveals which emails exist.
     private const string InvalidCredentials = "Invalid email or password.";
 
     private readonly SignInManager<ApplicationUser> _signInManager;
@@ -54,26 +53,18 @@ public class AccountController : BaseController
             return View(model);
         }
 
+        // Lockout on failure set to FALSE
         var result = await _signInManager.PasswordSignInAsync(
-            user, model.Password, model.RememberMe, lockoutOnFailure: true);
+            user, model.Password, model.RememberMe, lockoutOnFailure: false);
 
         if (result.Succeeded)
         {
             _logger.LogInformation("User {UserId} signed in", user.Id);
 
-            // Only follow local URLs, which prevents open-redirect attacks.
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return LocalRedirect(returnUrl);
 
             return RedirectToAction("Index", "Home");
-        }
-
-        if (result.IsLockedOut)
-        {
-            _logger.LogWarning("User {UserId} is locked out", user.Id);
-            ModelState.AddModelError(string.Empty,
-                "Too many failed attempts. This account is locked for 15 minutes.");
-            return View(model);
         }
 
         _logger.LogWarning("Failed sign-in for user {UserId}", user.Id);
