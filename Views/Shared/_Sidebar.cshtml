@@ -1,0 +1,317 @@
+﻿@using SmartAttendance.Web.Infrastructure
+@using SmartAttendance.Web.Models
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+
+    string Active(string c, string? a = null) =>
+        string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) &&
+        (a is null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase))
+            ? "active"
+            : string.Empty;
+
+    var isAdmin = User.IsInRole(Roles.Admin);
+    var fullName = User.GetFullName();
+    var roleLabel = User.GetRoleLabel();
+    var initial = string.IsNullOrWhiteSpace(fullName) ? "U" : char.ToUpperInvariant(fullName.Trim()[0]).ToString();
+}
+
+<style>
+    :root {
+        --sb-width: 250px;
+        --sb-top: 56px;
+        --sb-push: 0px;
+    }
+
+    #appSidebar {
+        position: fixed;
+        top: var(--sb-top);
+        bottom: 0;
+        left: 0;
+        width: var(--sb-width);
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border-right: 1px solid rgba(0, 0, 0, .12);
+        z-index: 1040;
+        overflow-y: auto;
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+    }
+
+        #appSidebar.open {
+            transform: translateX(0);
+        }
+
+    #sbHandle {
+        position: fixed;
+        top: 50%;
+        left: 0;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, .25);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
+        z-index: 1041;
+        transition: left .25s ease;
+    }
+
+        #sbHandle.open {
+            left: calc(var(--sb-width) - 14px);
+        }
+
+    #sbBackdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        top: var(--sb-top);
+        background: rgba(0, 0, 0, .4);
+        z-index: 1035;
+    }
+
+        #sbBackdrop.show {
+            display: block;
+        }
+
+    .app-shell {
+        margin-left: var(--sb-push);
+        transition: margin-left .25s ease;
+    }
+
+    .app-shell-split > * {
+        flex: 1 1 0 !important;
+        max-width: 100% !important;
+        width: auto !important;
+        min-width: 0;
+    }
+
+    .sb-no-anim, .sb-no-anim * {
+        transition: none !important;
+    }
+
+    .sb-avatar {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #0d6efd;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .sb-group {
+        padding: .5rem 1rem .25rem;
+        font-size: .72rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: #6c757d;
+    }
+</style>
+
+<div id="sbBackdrop"></div>
+
+<button type="button" id="sbHandle" class="sb-no-anim" aria-label="Toggle sidebar" aria-expanded="true">
+    <i class="bi bi-chevron-left"></i>
+</button>
+
+<nav id="appSidebar" class="sb-no-anim" aria-label="Main navigation">
+
+    <div class="p-3 border-bottom">
+        <div class="d-flex align-items-center gap-2">
+            <div class="sb-avatar">@initial</div>
+            <div class="lh-sm overflow-hidden">
+                <div class="fw-semibold text-truncate">@fullName</div>
+                <div class="small text-muted">@roleLabel</div>
+            </div>
+        </div>
+        <div class="mt-3 small text-muted">
+            <div id="sbDate"></div>
+            <div id="sbClock" class="fw-semibold text-body"></div>
+        </div>
+    </div>
+
+    <div class="p-2 flex-grow-1">
+        <ul class="nav nav-pills flex-column gap-1">
+
+            <li class="sb-group">Attendance</li>
+
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Attendance", "Index")"
+                   asp-controller="Attendance" asp-action="Index">
+                    <i class="bi bi-check2-square"></i> Take attendance
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Attendance", "History")"
+                   asp-controller="Attendance" asp-action="History">
+                    <i class="bi bi-clock-history"></i> History
+                </a>
+            </li>
+
+            <li class="sb-group">Manage</li>
+
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Students")"
+                   asp-controller="Students" asp-action="Index">
+                    <i class="bi bi-people"></i> Students
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Teachers")"
+                   asp-controller="Teachers" asp-action="Index">
+                    <i class="bi bi-person-workspace"></i> Teachers
+                </a>
+            </li>
+
+            @if (isAdmin)
+            {
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2 @Active("Subjects")"
+                       asp-controller="Subjects" asp-action="Index">
+                        <i class="bi bi-journal-bookmark"></i> Subjects
+                    </a>
+                </li>
+            }
+
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Timetable")"
+                   asp-controller="Timetable" asp-action="Index">
+                    <i class="bi bi-calendar3"></i> Timetable
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="p-3 border-top">
+        <form asp-controller="Account" asp-action="Logout" method="post">
+            <button type="submit" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-box-arrow-right"></i> Sign out
+            </button>
+        </form>
+        <div class="text-muted small text-center mt-2">Press [ to hide or show</div>
+    </div>
+</nav>
+
+<script>
+    (function () {
+        var nav = document.getElementById('appSidebar');
+        var handle = document.getElementById('sbHandle');
+        var backdrop = document.getElementById('sbBackdrop');
+        if (!nav || !handle || !backdrop) return;
+
+        var WIDTH = 250;
+        var KEY = 'sidebarOpen';
+        var root = document.documentElement;
+        var mq = window.matchMedia('(min-width: 992px)');
+
+        // 1. Find the layout column that used to hold the sidebar.
+        var panel = null;
+        var node = nav;
+        while (node.parentElement && node.parentElement !== document.body) {
+            var p = node.parentElement;
+            var cs = getComputedStyle(p);
+            var isRow = (cs.display === 'flex' && cs.flexDirection.indexOf('row') === 0) || cs.display === 'grid';
+            if (isRow) { panel = node; break; }
+            node = p;
+        }
+
+        var shell = panel ? panel.parentElement : document.querySelector('main');
+        if (shell) {
+            shell.classList.add('app-shell', 'sb-no-anim');
+            if (panel) shell.classList.add('app-shell-split');
+        }
+
+        // 2. Move the sidebar out of the layout column, then hide that empty column.
+        document.body.appendChild(backdrop);
+        document.body.appendChild(handle);
+        document.body.appendChild(nav);
+        if (panel && panel !== nav) panel.style.display = 'none';
+
+        // 3. Sidebar starts right under the top navbar.
+        function placeUnderNavbar() {
+            var bar = document.querySelector('.navbar');
+            var top = bar ? Math.round(bar.getBoundingClientRect().bottom) : 56;
+            if (top < 0) top = 0;
+            root.style.setProperty('--sb-top', top + 'px');
+        }
+        placeUnderNavbar();
+        window.addEventListener('resize', placeUnderNavbar);
+
+        // 4. Open / close.
+        function isDesktop() { return mq.matches; }
+
+        function savedOpen() {
+            var v = null;
+            try { v = localStorage.getItem(KEY); } catch (e) { }
+            return v !== '0';
+        }
+
+        var open = isDesktop() ? savedOpen() : false;
+
+        function render() {
+            nav.classList.toggle('open', open);
+            handle.classList.toggle('open', open);
+            handle.setAttribute('aria-expanded', String(open));
+            handle.firstElementChild.className = open ? 'bi bi-chevron-left' : 'bi bi-chevron-right';
+            root.style.setProperty('--sb-push', open && isDesktop() ? WIDTH + 'px' : '0px');
+            backdrop.classList.toggle('show', open && !isDesktop());
+        }
+
+        function toggle() {
+            open = !open;
+            if (isDesktop()) { try { localStorage.setItem(KEY, open ? '1' : '0'); } catch (e) { } }
+            render();
+        }
+
+        render();
+
+        // No slide animation on first paint, only on later clicks.
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                nav.classList.remove('sb-no-anim');
+                handle.classList.remove('sb-no-anim');
+                if (shell) shell.classList.remove('sb-no-anim');
+            });
+        });
+
+        handle.addEventListener('click', toggle);
+        backdrop.addEventListener('click', function () { open = false; render(); });
+
+        // On phones, tapping a link closes the drawer.
+        nav.addEventListener('click', function (e) {
+            if (!isDesktop() && e.target.closest('a')) { open = false; render(); }
+        });
+
+        mq.addEventListener('change', function () {
+            open = isDesktop() ? savedOpen() : false;
+            render();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            var t = e.target;
+            var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+            if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.key === '[') toggle();
+            if (e.key === 'Escape' && !isDesktop() && open) { open = false; render(); }
+        });
+
+        // 5. Live date and time.
+        var dateEl = document.getElementById('sbDate');
+        var clockEl = document.getElementById('sbClock');
+        function tick() {
+            var n = new Date();
+            if (dateEl) dateEl.textContent = n.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+            if (clockEl) clockEl.textContent = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        tick();
+        setInterval(tick, 30000);
+    })();
+</script>

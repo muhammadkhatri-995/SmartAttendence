@@ -1,0 +1,66 @@
+﻿@model StudentsIndexViewModel
+@{
+    ViewData["Title"] = "Students";
+}
+
+<div class="page-header">
+    <h1 class="h3 mb-1">Students</h1>
+    <p class="text-muted mb-0">@Model.Class.ClassName - @Model.Class.Section (@Model.Class.AcademicYear) &middot; @Model.Students.Count student(s)</p>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header fw-semibold">Add students</div>
+    <div class="card-body">
+        <form asp-action="Add" method="post" class="js-loading-form">
+            <label for="bulkText" class="form-label">One student per line: roll number, then name</label>
+            <textarea id="bulkText" name="bulkText" rows="5" class="form-control font-monospace"
+                      placeholder="1 Ali Khan&#10;2 Sara Ahmed&#10;21-CS-03 Usman Raza"></textarea>
+            <div class="form-text">You can also paste two columns straight from Excel. Add one student or many.</div>
+            <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    @if (Model.Students.Count == 0)
+    {
+        <div class="card-body text-center text-muted py-4">No students yet.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Roll no.</th><th>Name</th><th>Status</th><th class="text-end">Actions</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Students)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@s.RollNumber</td>
+                            <td>@s.FullName</td>
+                            <td>@if (s.IsActive) {
+                                <span class="badge text-bg-success">Active</span>
+                            } else
+                            {
+
+                                <span class="badge text-bg-secondary">Inactive</span>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@s.StudentId">Edit</a>
+                            <form asp-action="Toggle" asp-route-id="@s.StudentId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-warning">@(s.IsActive ? "Deactivate" : "Activate")</button>
+                            </form>
+                            <form asp-action="Delete" asp-route-id="@s.StudentId" method="post" class="d-inline"
+                                  data-confirm="Delete student @s.RollNumber - @s.FullName?">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+</div>

@@ -1,0 +1,100 @@
+## ---------- Build output ----------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+out/
+publish/
+artifacts/
+*.dll
+*.exe
+*.pdb
+*.cache
+project.lock.json
+project.fragment.lock.json
+
+## ---------- Visual Studio / VS Code / Rider ----------
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.rsuser
+*.VC.db
+*.VC.VC.opendb
+*.sln.iml
+*.DotSettings.user
+_ReSharper*/
+*.[Rr]e[Ss]harper
+.vshistory/
+
+## ---------- .NET / ASP.NET Core ----------
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+.nuget/
+launchSettings.json.bak
+*.publish.xml
+*.pubxml
+*.pubxml.user
+PublishScripts/
+wwwroot/lib/
+wwwroot/uploads/
+node_modules/
+.angular/
+
+## ---------- Test results / coverage ----------
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+coverage*.json
+coverage*.xml
+*.coverage
+*.coveragexml
+TestResults/
+.coverage/
+
+## ---------- Secrets and local config (never commit) ----------
+.env
+.env.*
+!.env.example
+secrets.json
+*.pfx
+*.key
+*.pem
+*.p12
+appsettings.Local.json
+appsettings.Production.json
+appsettings.Development.local.json
+appsettings.Secrets.json
+
+## ---------- Databases and local data ----------
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+*.bak
+*.dump
+*.sql.gz
+
+## ---------- Logs and temp files ----------
+*.log
+*.tmp
+*.temp
+*.swp
+~$*
+
+## ---------- Project-specific scratch files ----------
+combined.txt
+
+## ---------- OS files ----------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

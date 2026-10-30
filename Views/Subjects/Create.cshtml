@@ -1,0 +1,45 @@
+﻿@model SmartAttendance.Web.ViewModels.SubjectFormViewModel
+@{
+    ViewData["Title"] = "Add subject";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Add subject</h4>
+
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="SubjectCode" class="form-label"></label>
+                        <input asp-for="SubjectCode" class="form-control" placeholder="e.g. CS-301" autofocus />
+                        <span asp-validation-for="SubjectCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="SubjectName" class="form-label"></label>
+                        <input asp-for="SubjectName" class="form-control" placeholder="e.g. Operating Systems" />
+                        <span asp-validation-for="SubjectName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label"></label>
+                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Optional"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

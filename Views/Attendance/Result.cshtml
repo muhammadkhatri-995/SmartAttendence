@@ -1,0 +1,178 @@
+﻿@model SmartAttendance.Web.ViewModels.AttendanceResultViewModel
+@{
+    ViewData["Title"] = "Attendance saved";
+
+    // wa.me needs digits only, so drop a "+" if the number was stored with one.
+    var waUrl = (Model.WhatsAppUrl ?? string.Empty).Replace("wa.me/+", "wa.me/");
+    var hasUrl = !string.IsNullOrWhiteSpace(waUrl);
+    var absent = Model.Total - Model.Present;
+}
+
+<div id="toastBox" class="position-fixed top-0 end-0 p-3" style="z-index: 2000;"></div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-check-circle-fill text-success fs-3"></i>
+                    <h4 class="mb-0">Attendance saved</h4>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Class</div>
+                        <div class="fw-semibold">@Model.ClassLabel</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Date</div>
+                        <div class="fw-semibold">@Model.Date.ToString("dddd, dd MMMM yyyy")</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Subject</div>
+                        <div class="fw-semibold">@Model.Subject</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Teacher</div>
+                        <div class="fw-semibold">@Model.Teacher</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-primary fs-6">Total: @Model.Total</span>
+                    <span class="badge bg-success fs-6">Present: @Model.Present</span>
+                    <span class="badge bg-danger fs-6">Absent: @absent</span>
+                </div>
+
+                @if (Model.AbsentRolls.Count > 0)
+                {
+                    <div class="mb-1 text-muted small">Absent roll numbers</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach (var roll in Model.AbsentRolls)
+                        {
+                            <span class="badge text-bg-light border">@roll</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-success">Everyone was present.</div>
+                }
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body p-4">
+                <h6 class="mb-2">Message for @Model.Teacher</h6>
+                <textarea id="msg" class="form-control mb-3" rows="6" readonly>@Model.Message</textarea>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" id="copyBtn" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-clipboard"></i> Copy message
+                    </button>
+
+                    @if (hasUrl)
+                    {
+                        <a id="openWa" href="@waUrl" target="_blank" rel="noopener" class="btn btn-success btn-lg">
+                            <i class="bi bi-whatsapp"></i> Open WhatsApp
+                        </a>
+                    }
+                </div>
+
+                @if (!hasUrl)
+                {
+                    <div class="alert alert-warning mt-3 mb-0" data-keep="true">
+                        This teacher has no valid WhatsApp number. Add it under Teachers, then open this page again.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a asp-controller="Attendance" asp-action="Index" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")"
+               class="btn btn-outline-secondary">Back to lectures</a>
+            <a asp-controller="Attendance" asp-action="History" class="btn btn-outline-secondary">History</a>
+        </div>
+    </div>
+</div>
+
+<script>
+        (function () {
+            var HIDE_AFTER_MS = 2000;
+            var box = document.getElementById('toastBox');
+
+            // Small notification that removes itself after 2 seconds.
+            function showToast(text) {
+                if (!box) return;
+                var t = document.createElement('div');
+                t.className = 'bg-dark text-white rounded shadow px-3 py-2 mb-2';
+                t.style.transition = 'opacity .4s';
+                t.textContent = text;
+                box.appendChild(t);
+                setTimeout(function () {
+                    t.style.opacity = '0';
+                    setTimeout(function () { t.remove(); }, 400);
+                }, HIDE_AFTER_MS);
+            }
+
+            // Hide the layout's alerts (for example "Attendance saved") after 2 seconds.
+            setTimeout(function () {
+                document.querySelectorAll('.alert:not([data-keep])').forEach(function (a) {
+                    a.style.transition = 'opacity .4s';
+                    a.style.opacity = '0';
+                    setTimeout(function () { a.remove(); }, 400);
+                });
+            }, HIDE_AFTER_MS);
+
+            // Copy the message.
+            var msg = document.getElementById('msg');
+            var copyBtn = document.getElementById('copyBtn');
+
+            function copyText(text) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    return navigator.clipboard.writeText(text);
+                }
+                return new Promise(function (resolve, reject) {
+                    try {
+                        msg.removeAttribute('readonly');
+                        msg.select();
+                        var ok = document.execCommand('copy');
+                        msg.setAttribute('readonly', '');
+                        msg.setSelectionRange(0, 0);
+                        ok ? resolve() : reject(new Error('copy failed'));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
+            if (copyBtn && msg) {
+                copyBtn.addEventListener('click', function () {
+                    copyText(msg.value)
+                        .then(function () { showToast('Message copied'); })
+                        .catch(function () { showToast('Could not copy. Select the text and press Ctrl+C.'); });
+                });
+            }
+
+    @if (hasUrl)
+    {
+        <text>
+                    // Open WhatsApp once per saved attendance, so pressing Back does not reopen it.
+                    var url = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(waUrl));
+                    var key = "wa-opened-@Model.AssignmentId-@Model.Date.ToString("yyyyMMdd")";
+
+                    var alreadyOpened = false;
+                    try { alreadyOpened = sessionStorage.getItem(key) === '1'; } catch (e) { }
+
+                    if (!alreadyOpened) {
+                        showToast('Opening WhatsApp...');
+                        setTimeout(function () {
+                            try { sessionStorage.setItem(key, '1'); } catch (e) { }
+                            window.location.href = url;
+                        }, HIDE_AFTER_MS);
+                    }
+        </text>
+    }
+        })();
+</script>

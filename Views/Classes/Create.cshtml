@@ -1,0 +1,54 @@
+﻿@model SmartAttendance.Web.ViewModels.ClassesCreateInput
+@{
+    ViewData["Title"] = "Create class";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Create your class</h4>
+
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="ClassName" class="form-label"></label>
+                        <input asp-for="ClassName" class="form-control" placeholder="e.g. 24BSCS 3rd Year" autofocus />
+                        <span asp-validation-for="ClassName" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label asp-for="Section" class="form-label"></label>
+                            <input asp-for="Section" class="form-control" />
+                            <span asp-validation-for="Section" class="text-danger"></span>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label asp-for="Semester" class="form-label"></label>
+                            <select asp-for="Semester" class="form-select">
+                                @for (var i = 1; i <= 8; i++)
+                                {
+                                    <option value="@i" selected="@(Model.Semester == i)">@i</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Semester" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="AcademicYear" class="form-label"></label>
+                        <input asp-for="AcademicYear" class="form-control" placeholder="e.g. 2026-2027" />
+                        <span asp-validation-for="AcademicYear" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Create class</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
