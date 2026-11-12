@@ -1,4 +1,4 @@
-﻿@using SmartAttendance.Web.Infrastructure
+﻿@* @using SmartAttendance.Web.Infrastructure
 @using SmartAttendance.Web.Models
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
@@ -309,6 +309,481 @@
         function tick() {
             var n = new Date();
             if (dateEl) dateEl.textContent = n.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+            if (clockEl) clockEl.textContent = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        tick();
+        setInterval(tick, 30000);
+    })();
+</script> *@
+@using SmartAttendance.Web.Infrastructure
+@using SmartAttendance.Web.Models
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+
+    string Active(string c, string? a = null) =>
+        string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) &&
+        (a is null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase))
+            ? "active"
+            : string.Empty;
+
+    var isAdmin = User.IsInRole(Roles.Admin);
+    var fullName = User.GetFullName();
+    var roleLabel = User.GetRoleLabel();
+    var initial = string.IsNullOrWhiteSpace(fullName) ? "U" : char.ToUpperInvariant(fullName.Trim()[0]).ToString();
+}
+
+<style>
+    :root {
+        --sb-width: 264px;
+        --sb-top: 64px;
+        --sb-push: 0px;
+    }
+
+    /* ===== Purple sidebar (matches the reference design) ===== */
+    #appSidebar {
+        position: fixed;
+        top: var(--sb-top);
+        bottom: 0;
+        left: 0;
+        width: var(--sb-width);
+        max-width: 86vw;
+        display: flex;
+        flex-direction: column;
+        color: #fff;
+        background: linear-gradient(180deg, #8b6cf5 0%, #6d4ee3 55%, #5b3fd0 100%);
+        border-right: none;
+        box-shadow: 8px 0 30px rgba(60, 35, 160, 0.25);
+        z-index: 1040;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+    }
+
+    #appSidebar::before {
+        content: "";
+        position: absolute;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        top: -90px;
+        right: -90px;
+        pointer-events: none;
+    }
+
+    #appSidebar.open { transform: translateX(0); }
+
+    #appSidebar > * { position: relative; z-index: 1; }
+
+    /* ===== Toggle handle ===== */
+    #sbHandle {
+        position: fixed;
+        top: 50%;
+        left: 0;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--sa-card, #fff);
+        color: var(--sa-primary, #7c5cf0);
+        border: 1px solid var(--sa-border, rgba(0, 0, 0, .15));
+        box-shadow: 0 4px 12px rgba(99, 66, 216, 0.3);
+        z-index: 1041;
+        transition: left .25s ease, transform .15s ease;
+    }
+
+    #sbHandle:hover { transform: scale(1.1); }
+    #sbHandle:focus-visible { outline: 3px solid rgba(124, 92, 240, 0.45); outline-offset: 2px; }
+
+    #sbHandle.open { left: calc(var(--sb-width) - 15px); }
+
+    /* When the top bar has its own menu button, the handle is only used on desktop */
+    .has-menu-btn #sbHandle { display: none; }
+    @@media (min-width: 992px) {
+        .has-menu-btn #sbHandle { display: flex; }
+    }
+
+    #sbBackdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        top: var(--sb-top);
+        background: rgba(20, 12, 50, .5);
+        backdrop-filter: blur(2px);
+        z-index: 1035;
+    }
+
+    #sbBackdrop.show { display: block; }
+
+    .app-shell {
+        margin-left: var(--sb-push);
+        transition: margin-left .25s ease;
+    }
+
+    .app-shell-split > * {
+        flex: 1 1 0 !important;
+        max-width: 100% !important;
+        width: auto !important;
+        min-width: 0;
+    }
+
+    .sb-no-anim, .sb-no-anim * {
+        transition: none !important;
+    }
+
+    /* ===== Profile card ===== */
+    .sb-profile {
+        margin: 1rem 1rem 0.5rem;
+        padding: 1rem;
+        border-radius: 1.25rem;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .sb-avatar {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #fff;
+        color: #6342d8;
+        font-weight: 800;
+        font-size: 1.1rem;
+        box-shadow: 0 6px 14px rgba(30, 20, 90, 0.3);
+    }
+
+    .sb-name { font-weight: 700; color: #fff; }
+
+    .sb-role {
+        display: inline-block;
+        margin-top: 0.2rem;
+        padding: 0.1rem 0.6rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 600;
+    }
+
+    .sb-time {
+        margin-top: 0.9rem;
+        padding-top: 0.8rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    #sbClock {
+        font-weight: 800;
+        font-size: 1.05rem;
+        color: #fff;
+    }
+
+    /* ===== Navigation ===== */
+    .sb-group {
+        list-style: none;
+        padding: 0.9rem 0.9rem 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    #appSidebar .nav-pills {
+        --bs-nav-pills-link-active-bg: #fff;
+        --bs-nav-pills-link-active-color: #6342d8;
+    }
+
+    #appSidebar .nav-link {
+        color: rgba(255, 255, 255, 0.88);
+        border-radius: 0.9rem;
+        padding: 0.7rem 0.95rem;
+        font-weight: 600;
+        transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    }
+
+    #appSidebar .nav-link i {
+        font-size: 1.1rem;
+        width: 1.4rem;
+        text-align: center;
+    }
+
+    #appSidebar .nav-link:hover,
+    #appSidebar .nav-link:focus-visible {
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        transform: translateX(3px);
+    }
+
+    #appSidebar .nav-link.active {
+        background: #fff;
+        color: #6342d8;
+        box-shadow: 0 10px 20px rgba(30, 20, 90, 0.28);
+    }
+
+    #appSidebar .nav-link.active:hover { transform: none; }
+
+    /* ===== Footer ===== */
+    .sb-footer {
+        padding: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .sb-signout {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        font-weight: 700;
+        border-radius: 0.9rem;
+        padding: 0.65rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: background 0.2s ease;
+    }
+
+    .sb-signout:hover,
+    .sb-signout:focus { background: rgba(255, 255, 255, 0.24); color: #fff; }
+
+    .sb-hint {
+        margin-top: 0.6rem;
+        text-align: center;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.65);
+    }
+
+    .sb-hint kbd {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border-radius: 0.35rem;
+        padding: 0.05rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    @@media (max-width: 991.98px) {
+        .sb-hint { display: none; }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        #appSidebar, #sbHandle, .app-shell { transition: none !important; }
+    }
+</style>
+
+<div id="sbBackdrop"></div>
+
+<button type="button" id="sbHandle" class="sb-no-anim" aria-label="Toggle sidebar" aria-expanded="true">
+    <i class="bi bi-chevron-left"></i>
+</button>
+
+<nav id="appSidebar" class="sb-no-anim" aria-label="Main navigation">
+
+    <div class="sb-profile">
+        <div class="d-flex align-items-center gap-2">
+            <div class="sb-avatar">@initial</div>
+            <div class="lh-sm overflow-hidden">
+                <div class="sb-name text-truncate">@fullName</div>
+                <span class="sb-role">@roleLabel</span>
+            </div>
+        </div>
+        <div class="sb-time">
+            <div id="sbDate"></div>
+            <div id="sbClock"></div>
+        </div>
+    </div>
+
+    <div class="p-2 flex-grow-1">
+        <ul class="nav nav-pills flex-column gap-1">
+
+            <li class="sb-group">Attendance</li>
+
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Attendance", "Index")"
+                   asp-controller="Attendance" asp-action="Index">
+                    <i class="bi bi-check2-square"></i> Take attendance
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Attendance", "History")"
+                   asp-controller="Attendance" asp-action="History">
+                    <i class="bi bi-clock-history"></i> History
+                </a>
+            </li>
+
+            <li class="sb-group">Manage</li>
+
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Students")"
+                   asp-controller="Students" asp-action="Index">
+                    <i class="bi bi-people"></i> Students
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Teachers")"
+                   asp-controller="Teachers" asp-action="Index">
+                    <i class="bi bi-person-workspace"></i> Teachers
+                </a>
+            </li>
+
+            @if (isAdmin)
+            {
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2 @Active("Subjects")"
+                       asp-controller="Subjects" asp-action="Index">
+                        <i class="bi bi-journal-bookmark"></i> Subjects
+                    </a>
+                </li>
+            }
+
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center gap-2 @Active("Timetable")"
+                   asp-controller="Timetable" asp-action="Index">
+                    <i class="bi bi-calendar3"></i> Timetable
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="sb-footer">
+        <form asp-controller="Account" asp-action="Logout" method="post">
+            <button type="submit" class="sb-signout">
+                <i class="bi bi-box-arrow-right"></i> Sign out
+            </button>
+        </form>
+        <div class="sb-hint">Press <kbd>[</kbd> to hide or show</div>
+    </div>
+</nav>
+
+<script>
+    (function () {
+        var nav = document.getElementById('appSidebar');
+        var handle = document.getElementById('sbHandle');
+        var backdrop = document.getElementById('sbBackdrop');
+        if (!nav || !handle || !backdrop) return;
+
+        var WIDTH = 264;
+        var KEY = 'sidebarOpen';
+        var root = document.documentElement;
+        var mq = window.matchMedia('(min-width: 992px)');
+
+        // The top bar's own menu button (if the layout has one) controls the drawer on phones.
+        var menuBtn = document.getElementById('sbMenuBtn');
+        if (menuBtn) root.classList.add('has-menu-btn');
+
+        // 1. Find the layout column that used to hold the sidebar.
+        var panel = null;
+        var node = nav;
+        while (node.parentElement && node.parentElement !== document.body) {
+            var p = node.parentElement;
+            var cs = getComputedStyle(p);
+            var isRow = (cs.display === 'flex' && cs.flexDirection.indexOf('row') === 0) || cs.display === 'grid';
+            if (isRow) { panel = node; break; }
+            node = p;
+        }
+
+        var shell = panel ? panel.parentElement : document.querySelector('main');
+        if (shell) {
+            shell.classList.add('app-shell', 'sb-no-anim');
+            if (panel) shell.classList.add('app-shell-split');
+        }
+
+        // 2. Move the sidebar out of the layout column, then hide that empty column.
+        document.body.appendChild(backdrop);
+        document.body.appendChild(handle);
+        document.body.appendChild(nav);
+        if (panel && panel !== nav) panel.style.display = 'none';
+
+        // 3. Sidebar starts right under the top bar.
+        function placeUnderNavbar() {
+            var bar = document.querySelector('.sa-topbar, .navbar');
+            var top = bar ? Math.round(bar.getBoundingClientRect().bottom) : 64;
+            if (top < 0) top = 0;
+            root.style.setProperty('--sb-top', top + 'px');
+        }
+        placeUnderNavbar();
+        window.addEventListener('resize', placeUnderNavbar);
+
+        // 4. Open / close.
+        function isDesktop() { return mq.matches; }
+
+        function savedOpen() {
+            var v = null;
+            try { v = localStorage.getItem(KEY); } catch (e) { }
+            return v !== '0';
+        }
+
+        var open = isDesktop() ? savedOpen() : false;
+
+        function render() {
+            nav.classList.toggle('open', open);
+            handle.classList.toggle('open', open);
+            handle.setAttribute('aria-expanded', String(open));
+            if (menuBtn) menuBtn.setAttribute('aria-expanded', String(open));
+            handle.firstElementChild.className = open ? 'bi bi-chevron-left' : 'bi bi-chevron-right';
+            root.style.setProperty('--sb-push', open && isDesktop() ? WIDTH + 'px' : '0px');
+            backdrop.classList.toggle('show', open && !isDesktop());
+        }
+
+        function toggle() {
+            open = !open;
+            if (isDesktop()) { try { localStorage.setItem(KEY, open ? '1' : '0'); } catch (e) { } }
+            render();
+        }
+
+        render();
+
+        // No slide animation on first paint, only on later clicks.
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                nav.classList.remove('sb-no-anim');
+                handle.classList.remove('sb-no-anim');
+                if (shell) shell.classList.remove('sb-no-anim');
+            });
+        });
+
+        handle.addEventListener('click', toggle);
+        if (menuBtn) menuBtn.addEventListener('click', toggle);
+        backdrop.addEventListener('click', function () { open = false; render(); });
+
+        // On phones, tapping a link closes the drawer.
+        nav.addEventListener('click', function (e) {
+            if (!isDesktop() && e.target.closest('a')) { open = false; render(); }
+        });
+
+        mq.addEventListener('change', function () {
+            open = isDesktop() ? savedOpen() : false;
+            render();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            var t = e.target;
+            var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+            if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.key === '[') toggle();
+            if (e.key === 'Escape' && !isDesktop() && open) { open = false; render(); }
+        });
+
+        // 5. Live date and time.
+        var dateEl = document.getElementById('sbDate');
+        var clockEl = document.getElementById('sbClock');
+        function tick() {
+            var n = new Date();
+            if (dateEl) dateEl.textContent = n.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
             if (clockEl) clockEl.textContent = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
         tick();

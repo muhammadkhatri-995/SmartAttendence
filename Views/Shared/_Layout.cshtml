@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿@* <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -89,6 +89,483 @@
     <!-- JS CDNs -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html> *@
+@{
+    var isAuth = User.Identity?.IsAuthenticated == true;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#7c5cf0" />
+    <title>@ViewData["Title"] - Smart Attendance</title>
+
+    <!-- Apply saved/system theme before first paint (prevents a light flash in dark mode) -->
+    <script>
+        (function () {
+            var theme = 'light';
+            try {
+                theme = localStorage.getItem('sa-theme') ||
+                    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            } catch (e) { }
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <!-- Bootstrap Icons CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* =====================================================
+           PORTAL DESIGN TOKENS (single source of truth)
+           ===================================================== */
+        :root,
+        [data-bs-theme="light"] {
+            --sa-primary: #7c5cf0;
+            --sa-primary-dark: #6342d8;
+            --sa-primary-soft: #efeafe;
+            --sa-bg: #f1eefc;
+            --sa-card: #ffffff;
+            --sa-input-bg: #faf9ff;
+            --sa-text: #1e1b3a;
+            --sa-muted: #7b7894;
+            --sa-border: #e3def7;
+            --sa-success: #16a34a;
+            --sa-success-soft: #e8f8ef;
+            --sa-danger: #e5484d;
+            --sa-danger-dark: #cf3a40;
+            --sa-danger-soft: #fdecee;
+            --sa-warning: #e08a00;
+            --sa-warning-soft: #fff4e0;
+            --sa-radius: 1.5rem;
+            --sa-radius-sm: 0.9rem;
+            --sa-shadow: 0 20px 40px -15px rgba(99, 66, 216, 0.22);
+            --sa-topbar-h: 64px;
+
+            /* Map the tokens onto Bootstrap so every existing page follows the theme */
+            --bs-body-bg: var(--sa-bg);
+            --bs-body-color: var(--sa-text);
+            --bs-secondary-color: var(--sa-muted);
+            --bs-border-color: var(--sa-border);
+            --bs-primary: #7c5cf0;
+            --bs-primary-rgb: 124, 92, 240;
+            --bs-link-color: #6342d8;
+            --bs-link-hover-color: #5a3acb;
+            --bs-link-color-rgb: 99, 66, 216;
+            --bs-link-hover-color-rgb: 90, 58, 203;
+        }
+
+        [data-bs-theme="dark"] {
+            --sa-primary: #7c5cf0;
+            --sa-primary-dark: #8d73f6;
+            --sa-primary-soft: rgba(124, 92, 240, 0.18);
+            --sa-bg: #14121f;
+            --sa-card: #1d1a2e;
+            --sa-input-bg: #15122a;
+            --sa-text: #ece9ff;
+            --sa-muted: #9a96b8;
+            --sa-border: #2e2a47;
+            --sa-success: #34c47a;
+            --sa-success-soft: rgba(52, 196, 122, 0.14);
+            --sa-danger: #ff6b70;
+            --sa-danger-soft: rgba(229, 72, 77, 0.16);
+            --sa-warning: #f5a524;
+            --sa-warning-soft: rgba(245, 165, 36, 0.15);
+            --sa-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+
+            --bs-body-bg: var(--sa-bg);
+            --bs-body-color: var(--sa-text);
+            --bs-secondary-color: var(--sa-muted);
+            --bs-border-color: var(--sa-border);
+            --bs-link-color: #a794ff;
+            --bs-link-hover-color: #c0b2ff;
+            --bs-link-color-rgb: 167, 148, 255;
+            --bs-link-hover-color-rgb: 192, 178, 255;
+        }
+
+        /* =====================================================
+           BASE
+           ===================================================== */
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--sa-bg);
+            color: var(--sa-text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, h5, h6 { color: var(--sa-text); }
+
+        /* =====================================================
+           GLOBAL BOOTSTRAP RESTYLE (so old pages match too)
+           ===================================================== */
+        .btn { border-radius: 0.75rem; font-weight: 600; }
+
+        .btn-primary {
+            --bs-btn-bg: #7c5cf0;
+            --bs-btn-border-color: #7c5cf0;
+            --bs-btn-hover-bg: #6342d8;
+            --bs-btn-hover-border-color: #6342d8;
+            --bs-btn-active-bg: #5a3acb;
+            --bs-btn-active-border-color: #5a3acb;
+            --bs-btn-disabled-bg: #7c5cf0;
+            --bs-btn-disabled-border-color: #7c5cf0;
+            --bs-btn-focus-shadow-rgb: 124, 92, 240;
+        }
+
+        .btn-outline-primary {
+            --bs-btn-color: var(--sa-primary-dark);
+            --bs-btn-border-color: var(--sa-primary);
+            --bs-btn-hover-bg: #7c5cf0;
+            --bs-btn-hover-border-color: #7c5cf0;
+            --bs-btn-hover-color: #fff;
+            --bs-btn-active-bg: #6342d8;
+            --bs-btn-active-border-color: #6342d8;
+            --bs-btn-focus-shadow-rgb: 124, 92, 240;
+        }
+
+        .card {
+            --bs-card-bg: var(--sa-card);
+            --bs-card-border-color: var(--sa-border);
+            --bs-card-border-radius: var(--sa-radius-sm);
+            --bs-card-inner-border-radius: calc(var(--sa-radius-sm) - 1px);
+            --bs-card-cap-bg: transparent;
+            box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        }
+
+        .form-control,
+        .form-select {
+            background-color: var(--sa-input-bg);
+            border: 1.5px solid var(--sa-border);
+            color: var(--sa-text);
+            border-radius: 0.75rem;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: var(--sa-card);
+            border-color: var(--sa-primary);
+            box-shadow: 0 0 0 0.25rem rgba(124, 92, 240, 0.15);
+            color: var(--sa-text);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--sa-primary);
+            border-color: var(--sa-primary);
+        }
+
+        .alert { border-radius: var(--sa-radius-sm); border: none; }
+
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--sa-text);
+            --bs-table-border-color: var(--sa-border);
+        }
+
+        .dropdown-menu {
+            --bs-dropdown-bg: var(--sa-card);
+            --bs-dropdown-color: var(--sa-text);
+            --bs-dropdown-border-color: var(--sa-border);
+            --bs-dropdown-link-color: var(--sa-text);
+            --bs-dropdown-link-hover-bg: var(--sa-primary-soft);
+            --bs-dropdown-link-hover-color: var(--sa-primary-dark);
+            --bs-dropdown-header-color: var(--sa-muted);
+            --bs-dropdown-divider-bg: var(--sa-border);
+            --bs-dropdown-border-radius: var(--sa-radius-sm);
+            --bs-dropdown-item-border-radius: 0.6rem;
+            --bs-dropdown-padding-x: 0.4rem;
+            --bs-dropdown-padding-y: 0.4rem;
+            box-shadow: var(--sa-shadow);
+        }
+
+        .modal-content {
+            --bs-modal-bg: var(--sa-card);
+            --bs-modal-color: var(--sa-text);
+            --bs-modal-border-color: var(--sa-border);
+            --bs-modal-border-radius: var(--sa-radius);
+            --bs-modal-header-border-color: var(--sa-border);
+            --bs-modal-footer-border-color: var(--sa-border);
+            box-shadow: var(--sa-shadow);
+        }
+
+        .page-header h1 { font-weight: 800; }
+        .text-muted { color: var(--sa-muted) !important; }
+
+        /* =====================================================
+           TOP BAR
+           ===================================================== */
+        .sa-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            height: var(--sa-topbar-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0 1.25rem;
+            background: var(--sa-card);
+            border-bottom: 1px solid var(--sa-border);
+            box-shadow: 0 4px 20px rgba(99, 66, 216, 0.06);
+        }
+
+        .sa-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            color: var(--sa-text);
+            font-weight: 800;
+            font-size: 1.05rem;
+            text-decoration: none;
+            min-width: 0;
+        }
+        .sa-brand:hover { color: var(--sa-text); }
+
+        .sa-brand .logo-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 0.8rem;
+            background: linear-gradient(135deg, #8b6cf5, #6342d8);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 18px rgba(124, 92, 240, 0.35);
+            flex-shrink: 0;
+        }
+
+        .sa-brand .brand-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .sa-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.8rem;
+            border: 1px solid var(--sa-border);
+            background: var(--sa-primary-soft);
+            color: var(--sa-primary-dark);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            padding: 0;
+            transition: filter 0.2s ease, transform 0.15s ease;
+        }
+        .sa-icon-btn:hover { filter: brightness(0.95); transform: translateY(-1px); }
+        .sa-icon-btn:focus-visible { outline: 3px solid rgba(124, 92, 240, 0.45); outline-offset: 2px; }
+
+        .theme-icon-sun { display: none; }
+        [data-bs-theme="dark"] .theme-icon-sun { display: inline; }
+        [data-bs-theme="dark"] .theme-icon-moon { display: none; }
+
+        .sa-user-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border: 1px solid var(--sa-border);
+            background: var(--sa-primary-soft);
+            color: var(--sa-text);
+            border-radius: 999px;
+            padding: 0.25rem 0.8rem 0.25rem 0.25rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            max-width: 220px;
+        }
+        .sa-user-btn:hover,
+        .sa-user-btn:focus,
+        .sa-user-btn.show { background: var(--sa-primary-soft); color: var(--sa-text); border-color: var(--sa-primary); }
+        .sa-user-btn::after { margin-left: 0.1rem; }
+
+        .sa-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b6cf5, #6342d8);
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sa-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* =====================================================
+           APP SHELL + SIDEBAR
+           ===================================================== */
+        .app-shell {
+            display: flex;
+            min-height: calc(100vh - var(--sa-topbar-h));
+        }
+
+        .app-main {
+            flex: 1;
+            min-width: 0; /* prevents wide content from pushing outside the screen */
+            padding: 1.5rem;
+        }
+
+        /* Purple sidebar (works with an offcanvas sidebar with id="sidebar") */
+        #sidebar {
+            --bs-offcanvas-bg: #6d4ee3;
+            --bs-offcanvas-color: #fff;
+            background: linear-gradient(180deg, #8b6cf5 0%, #6d4ee3 55%, #5b3fd0 100%) !important;
+            color: #fff;
+        }
+
+        #sidebar .nav-link,
+        #sidebar a:not(.btn) {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        #sidebar .nav-link {
+            border-radius: 0.85rem;
+            padding: 0.65rem 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+        }
+
+        #sidebar .nav-link:hover {
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+            transform: translateX(2px);
+        }
+
+        #sidebar .nav-link.active {
+            background: #fff;
+            color: #6342d8;
+            box-shadow: 0 8px 18px rgba(30, 20, 90, 0.25);
+        }
+
+        #sidebar .btn-close { filter: invert(1) grayscale(1) brightness(2); }
+
+        @@media (min-width: 992px) {
+            #sidebar {
+                flex: 0 0 260px;
+                width: 260px;
+                position: sticky;
+                top: var(--sa-topbar-h);
+                height: calc(100vh - var(--sa-topbar-h));
+                overflow-y: auto;
+            }
+        }
+
+        /* Guests (login page): no padding, the page draws its own background */
+        .guest-main { min-height: 100vh; }
+
+        /* =====================================================
+           PHONES
+           ===================================================== */
+        @@media (max-width: 575.98px) {
+            .sa-topbar { padding: 0 0.75rem; }
+            .app-main { padding: 0.9rem; }
+            .sa-brand { font-size: 1rem; }
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
+    </style>
+</head>
+<body>
+    @if (isAuth)
+    {
+        var fullName = User.GetFullName() ?? "";
+        var initial = string.IsNullOrWhiteSpace(fullName) ? "U" : fullName.Trim().Substring(0, 1).ToUpperInvariant();
+
+        <header class="sa-topbar">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+                <button class="sa-icon-btn d-lg-none" type="button"
+                        data-bs-toggle="offcanvas" data-bs-target="#sidebar"
+                        aria-controls="sidebar" aria-label="Open navigation menu">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                <a class="sa-brand" asp-controller="Home" asp-action="Index">
+                    <span class="logo-badge">
+                        <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                    </span>
+                    <span class="brand-text">Smart Attendance</span>
+                </a>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="sa-icon-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                    <i class="bi bi-moon-stars-fill theme-icon-moon" aria-hidden="true"></i>
+                    <i class="bi bi-sun-fill theme-icon-sun" aria-hidden="true"></i>
+                </button>
+
+                <div class="dropdown">
+                    <button class="sa-user-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="sa-avatar" aria-hidden="true">@initial</span>
+                        <span class="sa-user-name d-none d-sm-inline">@fullName</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">@fullName<br /><span class="fw-normal">@User.GetRoleLabel()</span></h6></li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                            <form asp-controller="Account" asp-action="Logout" method="post">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Sign out
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <div class="app-shell">
+            <partial name="_Sidebar" />
+
+            <main id="main-content" class="app-main">
+                <partial name="_Alerts" />
+                @RenderBody()
+            </main>
+        </div>
+    }
+    else
+    {
+        <main class="guest-main">
+            @RenderBody()
+        </main>
+    }
+
+    <partial name="_ConfirmModal" />
+
+    <!-- JS CDNs -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <script>
+        // Theme toggle (light / dark), remembered on this device
+        (function () {
+            var btn = document.getElementById('themeToggle');
+            if (!btn) { return; }
+            btn.addEventListener('click', function () {
+                var html = document.documentElement;
+                var next = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-bs-theme', next);
+                try { localStorage.setItem('sa-theme', next); } catch (e) { }
+            });
+        })();
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

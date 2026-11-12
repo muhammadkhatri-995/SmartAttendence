@@ -1,4 +1,4 @@
-﻿@model AttendanceIndexViewModel
+﻿@* @model AttendanceIndexViewModel
 @{
     ViewData["Title"] = "Take attendance";
     var isToday = Model.Date == Model.Today;
@@ -63,4 +63,563 @@ else
             </div>
         }
     </div>
+} *@
+@model AttendanceIndexViewModel
+@{
+    ViewData["Title"] = "Take attendance";
+    var isToday = Model.Date == Model.Today;
+    var totalSlots = Model.Slots.Count;
+    var doneSlots = Model.Slots.Count(x => x.SessionId is not null);
+    var pendingSlots = totalSlots - doneSlots;
+}
+
+<style>
+    /* Tokens come from site.css (light or dark). The fallbacks below only apply if a token is missing. */
+
+    /* ===== Header banner ===== */
+    .lec-banner {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--sa-radius, 1.5rem);
+        padding: 1.75rem 2rem;
+        color: #fff;
+        background: linear-gradient(145deg, #8b6cf5 0%, #6d4ee3 60%, #5b3fd0 100%);
+        box-shadow: var(--sa-shadow, 0 20px 40px -15px rgba(99, 66, 216, 0.22));
+        margin-bottom: 1.25rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+    }
+
+    .lec-banner .deco {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        pointer-events: none;
+    }
+    .lec-banner .deco-1 { width: 240px; height: 240px; top: -90px; right: -60px; }
+    .lec-banner .deco-2 { width: 150px; height: 150px; bottom: -70px; right: 180px; }
+
+    .lec-banner .banner-main { position: relative; z-index: 1; min-width: 0; }
+
+    .lec-banner h1 {
+        font-size: 1.7rem;
+        font-weight: 800;
+        margin: 0 0 0.75rem;
+        overflow-wrap: anywhere;
+    }
+
+    .meta-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    .meta-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #fff;
+        border-radius: 999px;
+        padding: 0.3rem 0.85rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    /* Date picker inside the banner */
+    .date-form {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: var(--sa-radius-sm, 0.9rem);
+        padding: 0.65rem 0.75rem;
+    }
+
+    .date-form label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 0.25rem;
+    }
+
+    .date-form .form-control {
+        border-radius: 0.65rem;
+        border: none;
+        background: #fff;
+        color: #1e1b3a;
+        font-weight: 600;
+        min-width: 150px;
+    }
+
+    .btn-go {
+        border: none;
+        border-radius: 0.65rem;
+        background: #fff;
+        color: #6342d8;
+        font-weight: 700;
+        padding: 0.4rem 1.1rem;
+        transition: transform 0.15s ease;
+    }
+    .btn-go:hover { transform: translateY(-1px); color: #5a3acb; }
+
+    /* ===== Stat cards ===== */
+    .stat-col { min-width: 0; }
+
+    .stat-card {
+        background: var(--sa-card, #ffffff);
+        border-radius: var(--sa-radius-sm, 0.9rem);
+        padding: 1rem 1.15rem;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        border: 1px solid var(--sa-border, #e3def7);
+        height: 100%;
+        min-width: 0;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .stat-icon.total   { background: var(--sa-primary-soft, #efeafe); color: var(--sa-primary, #7c5cf0); }
+    .stat-icon.done    { background: var(--sa-success-soft, #e8f8ef); color: var(--sa-success, #16a34a); }
+    .stat-icon.pending { background: var(--sa-warning-soft, #fff4e0); color: var(--sa-warning, #e08a00); }
+
+    .stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--sa-text, #1e1b3a); }
+    .stat-label { font-size: 0.78rem; color: var(--sa-muted, #7b7894); }
+
+    /* ===== Section heading ===== */
+    .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 1.5rem 0 0.9rem;
+    }
+    .section-head h2 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--sa-text, #1e1b3a);
+    }
+
+    /* ===== Lecture cards ===== */
+    .lec-card {
+        position: relative;
+        height: 100%;
+        background: var(--sa-card, #ffffff);
+        border: 1px solid var(--sa-border, #e3def7);
+        border-radius: var(--sa-radius, 1.5rem);
+        padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .lec-card::before {
+        content: "";
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 6px;
+        background: linear-gradient(180deg, #8b6cf5, #6342d8);
+    }
+    .lec-card.is-done::before { background: linear-gradient(180deg, #34c47a, #16a34a); }
+
+    .lec-card:hover {
+        border-color: var(--sa-primary, #7c5cf0);
+        box-shadow: 0 16px 32px rgba(124, 92, 240, 0.2);
+    }
+
+    .lec-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .time-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--sa-primary-soft, #efeafe);
+        color: var(--sa-primary-dark, #6342d8);
+        border-radius: 999px;
+        padding: 0.3rem 0.8rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        border-radius: 999px;
+        padding: 0.25rem 0.7rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .status-pill.done    { background: var(--sa-success-soft, #e8f8ef); color: var(--sa-success, #16a34a); }
+    .status-pill.pending { background: var(--sa-warning-soft, #fff4e0); color: var(--sa-warning, #e08a00); }
+
+    .lec-subject {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--sa-text, #1e1b3a);
+        margin: 0 0 0.35rem;
+        overflow-wrap: anywhere;
+    }
+
+    .lec-teacher {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--sa-muted, #7b7894);
+        font-size: 0.9rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .lec-teacher .avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--sa-primary-soft, #efeafe);
+        color: var(--sa-primary, #7c5cf0);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+    }
+
+    .lec-actions {
+        margin-top: auto;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-main {
+        flex: 1;
+        border: none;
+        color: #fff;
+        font-weight: 700;
+        border-radius: var(--sa-radius-sm, 0.9rem);
+        padding: 0.7rem 1.2rem;
+        background: linear-gradient(135deg, #7c5cf0, #6342d8);
+        box-shadow: 0 10px 22px rgba(124, 92, 240, 0.3);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        text-decoration: none;
+        transition: transform 0.15s ease;
+    }
+    .btn-main:hover,
+    .btn-main:focus { color: #fff; background: linear-gradient(135deg, #8a6cf7, #5a3acb); transform: translateY(-1px); }
+
+    .btn-report {
+        flex: 1;
+        border: none;
+        color: #fff;
+        font-weight: 700;
+        border-radius: var(--sa-radius-sm, 0.9rem);
+        padding: 0.65rem 1rem;
+        background: linear-gradient(135deg, #34c47a, #16a34a);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        text-decoration: none;
+    }
+    .btn-report:hover { color: #fff; filter: brightness(1.05); }
+
+    .btn-edit {
+        flex: 1;
+        border: 1px solid var(--sa-border, #e3def7);
+        background: var(--sa-primary-soft, #efeafe);
+        color: var(--sa-primary-dark, #6342d8);
+        font-weight: 700;
+        border-radius: var(--sa-radius-sm, 0.9rem);
+        padding: 0.65rem 1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        text-decoration: none;
+    }
+    .btn-edit:hover { filter: brightness(0.96); color: var(--sa-primary-dark, #6342d8); }
+
+    /* ===== Empty state ===== */
+    .empty-card {
+        background: var(--sa-card, #ffffff);
+        border: 1px solid var(--sa-border, #e3def7);
+        border-radius: var(--sa-radius, 1.5rem);
+        padding: 3rem 1.5rem;
+        text-align: center;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        color: var(--sa-text, #1e1b3a);
+    }
+    .empty-card .empty-icon {
+        width: 72px; height: 72px;
+        margin: 0 auto 1rem;
+        border-radius: 1.2rem;
+        background: var(--sa-primary-soft, #efeafe);
+        color: var(--sa-primary, #7c5cf0);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem;
+    }
+    .empty-card a { color: var(--sa-primary, #7c5cf0); font-weight: 600; }
+
+    /* Hidden until Anime.js reveals them (noscript fallback below) */
+    [data-anim] { opacity: 0; }
+
+    /* ===== Phones ===== */
+    @@media (max-width: 575.98px) {
+        .lec-banner { padding: 1.25rem 1.1rem; align-items: stretch; }
+        .lec-banner h1 { font-size: 1.4rem; }
+        .meta-chip { font-size: 0.8rem; padding: 0.25rem 0.7rem; }
+
+        .date-form { width: 100%; }
+        .date-form .date-field { flex: 1; min-width: 0; }
+        .date-form .form-control { width: 100%; min-width: 0; }
+
+        /* Stat cards: icon on top so three fit in a row */
+        .stat-card {
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            gap: 0.45rem;
+            padding: 0.8rem 0.35rem;
+        }
+        .stat-icon { width: 36px; height: 36px; border-radius: 0.7rem; }
+        .stat-value { font-size: 1.3rem; }
+        .stat-label { font-size: 0.72rem; }
+
+        .lec-card { padding: 1.1rem 1rem 1.1rem 1.35rem; }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        [data-anim] { opacity: 1 !important; transform: none !important; }
+    }
+</style>
+
+<noscript>
+    <style>
+        [data-anim] { opacity: 1 !important; }
+    </style>
+</noscript>
+
+<div class="lec-banner" data-anim>
+    <span class="deco deco-1"></span>
+    <span class="deco deco-2"></span>
+
+    <div class="banner-main">
+        <h1>@(isToday ? "Today's lectures" : "Lectures")</h1>
+        <div class="meta-chips">
+            <span class="meta-chip">
+                <i class="bi bi-calendar3" aria-hidden="true"></i>@Model.Date.ToString("dddd, dd MMMM yyyy")
+            </span>
+            <span class="meta-chip">
+                <i class="bi bi-people" aria-hidden="true"></i>@Model.Class.ClassName - @Model.Class.Section
+            </span>
+        </div>
+    </div>
+
+    <form method="get" class="date-form">
+        <div class="date-field">
+            <label for="date">Other date</label>
+            <input id="date" name="date" type="date" class="form-control form-control-sm"
+                   value="@Model.Date.ToString("yyyy-MM-dd")" max="@Model.Today.ToString("yyyy-MM-dd")" />
+        </div>
+        <button type="submit" class="btn-go">Go</button>
+    </form>
+</div>
+
+@if (Model.Slots.Count == 0)
+{
+    <div class="empty-card" data-anim>
+        <div class="empty-icon">
+            <i class="bi bi-calendar-x" aria-hidden="true"></i>
+        </div>
+        <h2 class="h5 fw-bold mb-1">No lectures scheduled</h2>
+        <p class="mb-0" style="color: var(--sa-muted, #7b7894);">
+            No lectures in the timetable for @Model.Date.DayOfWeek.
+            <a asp-controller="Timetable" asp-action="Index">Edit timetable</a>
+        </p>
+    </div>
+}
+else
+{
+    <!-- Stat cards -->
+    <div class="row g-2 g-md-3">
+        <div class="col-4 stat-col" data-anim>
+            <div class="stat-card">
+                <span class="stat-icon total"><i class="bi bi-journal-text" aria-hidden="true"></i></span>
+                <div>
+                    <div class="stat-value" data-count="@totalSlots">0</div>
+                    <div class="stat-label">Lectures</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-4 stat-col" data-anim>
+            <div class="stat-card">
+                <span class="stat-icon done"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></span>
+                <div>
+                    <div class="stat-value" data-count="@doneSlots">0</div>
+                    <div class="stat-label">Done</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-4 stat-col" data-anim>
+            <div class="stat-card">
+                <span class="stat-icon pending"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
+                <div>
+                    <div class="stat-value" data-count="@pendingSlots">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-head" data-anim>
+        <h2>Schedule</h2>
+    </div>
+
+    <div class="row g-3" id="lecGrid">
+        @foreach (var s in Model.Slots)
+        {
+            <div class="col-md-6 col-xl-4 lec-col">
+                <div class="lec-card @(s.SessionId is not null ? "is-done" : "")">
+                    <div class="lec-top">
+                        <span class="time-chip">
+                            <i class="bi bi-clock" aria-hidden="true"></i>@s.Start.ToString("hh:mm tt")
+                        </span>
+                        @if (s.SessionId is not null)
+                        {
+                            <span class="status-pill done"><i class="bi bi-check2" aria-hidden="true"></i>Done</span>
+                        }
+                        else
+                        {
+                            <span class="status-pill pending">Pending</span>
+                        }
+                    </div>
+
+                    <h2 class="lec-subject">@s.Subject</h2>
+
+                    <div class="lec-teacher">
+                        <span class="avatar"><i class="bi bi-person-fill" aria-hidden="true"></i></span>
+                        <span>@s.Teacher</span>
+                    </div>
+
+                    <div class="lec-actions">
+                        @if (s.SessionId is not null)
+                        {
+                            <a class="btn-report" asp-action="Result" asp-route-id="@s.SessionId">
+                                <i class="bi bi-file-earmark-bar-graph" aria-hidden="true"></i>Report
+                            </a>
+                            <a class="btn-edit" asp-action="Mark"
+                               asp-route-assignmentId="@s.AssignmentId" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")">
+                                <i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+                            </a>
+                        }
+                        else
+                        {
+                            <a class="btn-main" asp-action="Mark"
+                               asp-route-assignmentId="@s.AssignmentId" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")">
+                                <i class="bi bi-check2-square" aria-hidden="true"></i>Take attendance
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    <script>
+        (function () {
+            var counters = document.querySelectorAll('[data-count]');
+
+            function showAll() {
+                document.querySelectorAll('[data-anim], .lec-col').forEach(function (el) {
+                    el.style.opacity = 1;
+                    el.style.transform = 'none';
+                });
+                counters.forEach(function (el) { el.textContent = el.getAttribute('data-count'); });
+            }
+
+            var hasAnime = typeof anime !== 'undefined' &&
+                !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (!hasAnime) { showAll(); return; }
+
+            // Lecture columns are revealed by the timeline (hidden here through JS, so they stay visible if JS fails)
+            document.querySelectorAll('.lec-col').forEach(function (el) { el.style.opacity = 0; });
+
+            var tl = anime.timeline({ easing: 'easeOutExpo' });
+
+            tl.add({
+                targets: '.lec-banner',
+                opacity: [0, 1], translateY: [-24, 0], duration: 700
+            })
+            .add({
+                targets: '.stat-col',
+                opacity: [0, 1], translateY: [24, 0],
+                delay: anime.stagger(100), duration: 600
+            }, '-=400')
+            .add({
+                targets: '.section-head, .empty-card',
+                opacity: [0, 1], translateY: [16, 0], duration: 500
+            }, '-=350')
+            .add({
+                targets: '.lec-col',
+                opacity: [0, 1], translateY: [30, 0], scale: [0.97, 1],
+                delay: anime.stagger(90), duration: 650
+            }, '-=300');
+
+            // Count-up for the stat numbers
+            counters.forEach(function (el) {
+                var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+                var obj = { v: 0 };
+                anime({
+                    targets: obj, v: target, round: 1,
+                    duration: 1000, delay: 500, easing: 'easeOutExpo',
+                    update: function () { el.textContent = obj.v; }
+                });
+            });
+
+            // Safety net: every block ends fully visible
+            tl.finished.then(function () {
+                document.querySelectorAll('[data-anim], .lec-col').forEach(function (el) { el.style.opacity = 1; });
+            });
+
+            // Small press feedback on the main buttons
+            document.querySelectorAll('.btn-main, .btn-report, .btn-edit, .btn-go').forEach(function (btn) {
+                btn.addEventListener('mousedown', function () {
+                    anime({ targets: btn, scale: 0.96, duration: 120, easing: 'easeOutQuad' });
+                });
+                ['mouseup', 'mouseleave'].forEach(function (evt) {
+                    btn.addEventListener(evt, function () {
+                        anime({ targets: btn, scale: 1, duration: 220, easing: 'easeOutBack' });
+                    });
+                });
+            });
+        })();
+    </script>
 }
