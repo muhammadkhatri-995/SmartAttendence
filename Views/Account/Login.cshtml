@@ -1,4 +1,4 @@
-﻿@model SmartAttendance.Web.ViewModels.LoginViewModel
+﻿@* @model SmartAttendance.Web.ViewModels.LoginViewModel
 
 @{
     ViewData["Title"] = "Log in";
@@ -171,4 +171,551 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+} *@
+@model SmartAttendance.Web.ViewModels.LoginViewModel
+
+@{
+    ViewData["Title"] = "Log in";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var returnUrl = ViewData["ReturnUrl"] as string;
+}
+
+<style>
+    /* ===== Portal design tokens (move these to site.css to reuse across the portal) ===== */
+    :root {
+        --sa-primary: #7c5cf0;
+        --sa-primary-dark: #6342d8;
+        --sa-primary-soft: #efeafe;
+        --sa-bg: #f1eefc;
+        --sa-card: #ffffff;
+        --sa-text: #1e1b3a;
+        --sa-muted: #7b7894;
+        --sa-border: #e3def7;
+        --sa-radius: 1.5rem;
+        --sa-radius-sm: 0.9rem;
+        --sa-shadow: 0 25px 50px -12px rgba(99, 66, 216, 0.25);
+    }
+
+    .auth-container {
+        position: relative;
+        min-height: calc(100vh - 120px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--sa-bg);
+        padding: 2rem 1rem;
+        overflow: hidden;
+    }
+
+    .auth-container::before,
+    .auth-container::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(124, 92, 240, 0.12);
+        pointer-events: none;
+    }
+    .auth-container::before { width: 420px; height: 420px; top: -160px; right: -120px; }
+    .auth-container::after  { width: 320px; height: 320px; bottom: -140px; left: -100px; }
+
+    /* ===== Shell ===== */
+    .auth-shell {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        width: 100%;
+        max-width: 980px;
+        background: var(--sa-card);
+        border-radius: 2rem;
+        box-shadow: var(--sa-shadow);
+        overflow: hidden;
+    }
+
+    /* ===== Left purple panel (sidebar / welcome banner look) ===== */
+    .auth-side {
+        position: relative;
+        flex: 1 1 52%;
+        padding: 2.5rem;
+        color: #fff;
+        background: linear-gradient(145deg, #8b6cf5 0%, #6d4ee3 60%, #5b3fd0 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        min-height: 560px;
+    }
+
+    .auth-side .deco {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        pointer-events: none;
+    }
+    .auth-side .deco-1 { width: 260px; height: 260px; top: -90px; right: -80px; }
+    .auth-side .deco-2 { width: 180px; height: 180px; bottom: -60px; left: -50px; }
+
+    .auth-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .logo-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.9rem;
+        background: #fff;
+        color: var(--sa-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+    }
+
+    .side-copy {
+        position: relative;
+        z-index: 1;
+        margin: 1.5rem 0;
+    }
+
+    .side-copy h2 {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 0.75rem;
+    }
+
+    .side-copy p {
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0;
+        max-width: 320px;
+    }
+
+    /* Floating dashboard-style mini cards */
+    .mini-cards {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        gap: 0.9rem;
+        flex-wrap: wrap;
+    }
+
+    .mini-card {
+        background: #fff;
+        color: var(--sa-text);
+        border-radius: var(--sa-radius-sm);
+        padding: 0.9rem 1.1rem;
+        min-width: 140px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 12px 28px rgba(30, 20, 90, 0.25);
+    }
+
+    .mini-card .mini-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 0.7rem;
+        background: var(--sa-primary-soft);
+        color: var(--sa-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .mini-card .mini-value { font-weight: 800; font-size: 1.05rem; line-height: 1.1; }
+    .mini-card .mini-label { font-size: 0.72rem; color: var(--sa-muted); }
+
+    /* ===== Right form panel ===== */
+    .auth-form-wrap {
+        flex: 1 1 48%;
+        padding: 3rem 2.75rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .auth-form-wrap h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--sa-text);
+        margin-bottom: 0.25rem;
+    }
+
+    .auth-form-wrap .subtitle {
+        color: var(--sa-muted);
+        font-size: 0.92rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .input-icon-wrapper { position: relative; }
+
+    .input-icon-wrapper .input-icon {
+        position: absolute;
+        left: 1rem;
+        top: 1.1rem;
+        z-index: 4;
+        color: var(--sa-muted);
+        pointer-events: none;
+        display: flex;
+        transition: color 0.2s ease;
+    }
+
+    .input-icon-wrapper:focus-within .input-icon { color: var(--sa-primary); }
+
+    .input-icon-wrapper .form-control {
+        padding-left: 2.9rem;
+        height: calc(3.5rem + 2px);
+        border-radius: var(--sa-radius-sm);
+        border: 1.5px solid var(--sa-border);
+        background: #faf9ff;
+        color: var(--sa-text);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .input-icon-wrapper .form-control:focus {
+        background: #fff;
+        border-color: var(--sa-primary);
+        box-shadow: 0 0 0 0.25rem rgba(124, 92, 240, 0.15);
+    }
+
+    .input-icon-wrapper .form-floating > label {
+        padding-left: 2.9rem;
+        color: var(--sa-muted);
+    }
+
+    .form-check-input {
+        width: 1.15em;
+        height: 1.15em;
+        border-radius: 0.35em;
+        cursor: pointer;
+        border-color: var(--sa-border);
+    }
+
+    .form-check-input:checked {
+        background-color: var(--sa-primary);
+        border-color: var(--sa-primary);
+    }
+
+    .form-check-input:focus {
+        border-color: var(--sa-primary);
+        box-shadow: 0 0 0 0.25rem rgba(124, 92, 240, 0.15);
+    }
+
+    .form-check-label {
+        cursor: pointer;
+        user-select: none;
+        color: var(--sa-muted);
+    }
+
+    .btn-login {
+        padding: 0.9rem 1.5rem;
+        font-weight: 700;
+        border-radius: var(--sa-radius-sm);
+        border: none;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, var(--sa-primary), var(--sa-primary-dark));
+        box-shadow: 0 12px 24px rgba(124, 92, 240, 0.35);
+    }
+
+    .btn-login:hover,
+    .btn-login:focus {
+        color: #fff;
+        background: linear-gradient(135deg, #8a6cf7, #5a3acb);
+    }
+
+    .btn-login .btn-arrow { display: inline-flex; }
+
+    .mobile-brand { display: none; }
+
+    @@media (max-width: 767.98px) {
+        .auth-side { display: none; }
+        .auth-form-wrap { padding: 2rem 1.5rem; }
+        .mobile-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            color: var(--sa-text);
+        }
+        .mobile-brand .logo-badge {
+            background: var(--sa-primary);
+            color: #fff;
+        }
+    }
+
+    /* Hidden until Anime.js reveals them (noscript fallback below) */
+    [data-anim] { opacity: 0; }
+
+    @@media (prefers-reduced-motion: reduce) {
+        [data-anim] { opacity: 1 !important; transform: none !important; }
+    }
+</style>
+
+<noscript>
+    <style>
+        [data-anim] { opacity: 1 !important; }
+    </style>
+</noscript>
+
+<div class="auth-container">
+    <div class="auth-shell" id="authShell" data-anim>
+
+        <!-- LEFT: purple welcome panel -->
+        <aside class="auth-side">
+            <span class="deco deco-1"></span>
+            <span class="deco deco-2"></span>
+
+            <div class="auth-logo" data-side>
+                <span class="logo-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 10 12 5 2 10l10 5 10-5z" />
+                        <path d="M6 12v5c3 2.5 9 2.5 12 0v-5" />
+                    </svg>
+                </span>
+                <span>Smart Attendance</span>
+            </div>
+
+            <div class="side-copy" data-side>
+                <h2>Welcome back to your learning space</h2>
+                <p>Track attendance, manage classes and stay on top of everything in one place.</p>
+            </div>
+
+            <div class="mini-cards">
+                <div class="mini-card" data-side data-float>
+                    <span class="mini-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                    </span>
+                    <div>
+                        <div class="mini-value"><span id="counterValue">0</span>%</div>
+                        <div class="mini-label">Attendance rate</div>
+                    </div>
+                </div>
+
+                <div class="mini-card" data-side data-float>
+                    <span class="mini-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        </svg>
+                    </span>
+                    <div>
+                        <div class="mini-value">24</div>
+                        <div class="mini-label">Active classes</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- RIGHT: form -->
+        <section class="auth-form-wrap">
+            <div class="mobile-brand" data-anim>
+                <span class="logo-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 10 12 5 2 10l10 5 10-5z" />
+                        <path d="M6 12v5c3 2.5 9 2.5 12 0v-5" />
+                    </svg>
+                </span>
+                <span>Smart Attendance</span>
+            </div>
+
+            <h1 data-anim>Sign in</h1>
+            <p class="subtitle" data-anim>Enter your details to access your account</p>
+
+            <form asp-action="Login" asp-route-returnUrl="@returnUrl" method="post" class="js-loading-form">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small" role="alert"></div>
+
+                <div class="mb-3 input-icon-wrapper" data-anim>
+                    <div class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="20" height="16" x="2" y="4" rx="2" />
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                        </svg>
+                    </div>
+                    <div class="form-floating">
+                        <input asp-for="Email" class="form-control" placeholder="name@example.com" autocomplete="username" autofocus />
+                        <label asp-for="Email">Email address</label>
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small mt-1 d-block"></span>
+                </div>
+
+                <div class="mb-3 input-icon-wrapper" data-anim>
+                    <div class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                    </div>
+                    <div class="form-floating">
+                        <input asp-for="Password" class="form-control" placeholder="Password" autocomplete="current-password" />
+                        <label asp-for="Password">Password</label>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4" data-anim>
+                    <div class="form-check m-0">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label small"></label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-login w-100" id="loginBtn" data-anim>
+                    <span>Sign in</span>
+                    <span class="btn-arrow">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                            <polyline points="10 17 15 12 10 7" />
+                            <line x1="15" x2="3" y1="12" y2="12" />
+                        </svg>
+                    </span>
+                </button>
+            </form>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    <script>
+        (function () {
+            function showAll() {
+                document.querySelectorAll("[data-anim], [data-side]").forEach(function (el) {
+                    el.style.opacity = 1;
+                    el.style.transform = "none";
+                });
+                var c = document.getElementById("counterValue");
+                if (c) c.textContent = "92";
+            }
+
+            var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (typeof anime === "undefined" || reduceMotion) { showAll(); return; }
+
+            // Left-panel items start hidden through JS (so they stay visible if JS fails)
+            document.querySelectorAll("[data-side]").forEach(function (el) { el.style.opacity = 0; });
+
+            // 1. Entrance: shell, then left panel, then form content
+            var tl = anime.timeline({ easing: "easeOutExpo" });
+
+            tl.add({
+                targets: "#authShell",
+                opacity: [0, 1],
+                translateY: [40, 0],
+                scale: [0.97, 1],
+                duration: 800
+            })
+            .add({
+                targets: "[data-side]",
+                opacity: [0, 1],
+                translateX: [-30, 0],
+                delay: anime.stagger(120),
+                duration: 700
+            }, "-=500")
+            .add({
+                targets: ".auth-form-wrap [data-anim]",
+                opacity: [0, 1],
+                translateY: [20, 0],
+                delay: anime.stagger(90),
+                duration: 600
+            }, "-=800");
+
+            // 2. Attendance counter on the stat card
+            var counter = { value: 0 };
+            anime({
+                targets: counter,
+                value: 92,
+                round: 1,
+                duration: 1800,
+                delay: 900,
+                easing: "easeOutExpo",
+                update: function () {
+                    document.getElementById("counterValue").textContent = counter.value;
+                }
+            });
+
+            // 3. Floating mini cards (gentle bobbing loop)
+            anime({
+                targets: "[data-float]",
+                translateY: [0, -8],
+                direction: "alternate",
+                loop: true,
+                easing: "easeInOutSine",
+                duration: 2200,
+                delay: anime.stagger(400, { start: 1200 })
+            });
+
+            // 4. Decorative circles drift
+            anime({
+                targets: ".auth-side .deco-1",
+                translateX: [0, -25], translateY: [0, 20],
+                direction: "alternate", loop: true,
+                easing: "easeInOutSine", duration: 5000
+            });
+            anime({
+                targets: ".auth-side .deco-2",
+                translateX: [0, 30], translateY: [0, -20],
+                direction: "alternate", loop: true,
+                easing: "easeInOutSine", duration: 6000
+            });
+
+            // 5. Input icon bounce on focus
+            document.querySelectorAll(".input-icon-wrapper .form-control").forEach(function (input) {
+                input.addEventListener("focus", function () {
+                    var icon = input.closest(".input-icon-wrapper").querySelector(".input-icon");
+                    anime.remove(icon);
+                    anime({
+                        targets: icon,
+                        translateX: [0, 4, 0],
+                        scale: [1, 1.2, 1],
+                        duration: 450,
+                        easing: "easeOutBack"
+                    });
+                });
+            });
+
+            // 6. Button arrow nudge + press feedback
+            var btn = document.getElementById("loginBtn");
+            var arrow = btn.querySelector(".btn-arrow");
+            btn.addEventListener("mouseenter", function () {
+                anime.remove(arrow);
+                anime({ targets: arrow, translateX: 6, duration: 300, easing: "easeOutQuad" });
+            });
+            btn.addEventListener("mouseleave", function () {
+                anime.remove(arrow);
+                anime({ targets: arrow, translateX: 0, duration: 300, easing: "easeOutQuad" });
+            });
+            btn.addEventListener("mousedown", function () {
+                anime({ targets: btn, scale: 0.97, duration: 120, easing: "easeOutQuad" });
+            });
+            btn.addEventListener("mouseup", function () {
+                anime({ targets: btn, scale: 1, duration: 200, easing: "easeOutBack" });
+            });
+
+            // 7. Shake the shell when the server returns a login error
+            if (document.querySelector(".validation-summary-errors")) {
+                tl.finished.then(function () {
+                    anime({
+                        targets: "#authShell",
+                        translateX: [0, -12, 12, -8, 8, -4, 0],
+                        duration: 500,
+                        easing: "easeInOutSine"
+                    });
+                });
+            }
+        })();
+    </script>
 }

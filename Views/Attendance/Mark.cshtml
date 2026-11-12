@@ -1,4 +1,4 @@
-﻿@model MarkViewModel
+﻿@* @model MarkViewModel
 @{
     ViewData["Title"] = "Mark attendance";
 }
@@ -91,6 +91,593 @@ else
 
             form.addEventListener('change', update);
             update();
+        })();
+    </script>
+} *@
+@model MarkViewModel
+@{
+    ViewData["Title"] = "Mark attendance";
+}
+
+<style>
+    /* ===== Portal design tokens (move to site.css once, then delete this block) ===== */
+    :root {
+        --sa-primary: #7c5cf0;
+        --sa-primary-dark: #6342d8;
+        --sa-primary-soft: #efeafe;
+        --sa-bg: #f1eefc;
+        --sa-card: #ffffff;
+        --sa-text: #1e1b3a;
+        --sa-muted: #7b7894;
+        --sa-border: #e3def7;
+        --sa-success: #16a34a;
+        --sa-success-soft: #e8f8ef;
+        --sa-danger: #e5484d;
+        --sa-danger-dark: #cf3a40;
+        --sa-danger-soft: #fdecee;
+        --sa-radius: 1.5rem;
+        --sa-radius-sm: 0.9rem;
+        --sa-shadow: 0 20px 40px -15px rgba(99, 66, 216, 0.22);
+    }
+
+    /* ===== Header banner (like "Welcome back, John!") ===== */
+    .mark-banner {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--sa-radius);
+        padding: 1.75rem 2rem;
+        color: #fff;
+        background: linear-gradient(145deg, #8b6cf5 0%, #6d4ee3 60%, #5b3fd0 100%);
+        box-shadow: var(--sa-shadow);
+        margin-bottom: 1.25rem;
+    }
+
+    .mark-banner .deco {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        pointer-events: none;
+    }
+    .mark-banner .deco-1 { width: 240px; height: 240px; top: -90px; right: -60px; }
+    .mark-banner .deco-2 { width: 150px; height: 150px; bottom: -70px; right: 160px; }
+
+    .mark-banner h1 {
+        position: relative;
+        z-index: 1;
+        font-size: 1.6rem;
+        font-weight: 800;
+        margin: 0 0 0.75rem;
+    }
+
+    .meta-chips {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .meta-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #fff;
+        border-radius: 999px;
+        padding: 0.3rem 0.85rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    /* ===== Stat cards ===== */
+    .stat-card {
+        background: var(--sa-card);
+        border-radius: var(--sa-radius-sm);
+        padding: 1rem 1.15rem;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        border: 1px solid var(--sa-border);
+        height: 100%;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .stat-icon.total   { background: var(--sa-primary-soft); color: var(--sa-primary); }
+    .stat-icon.present { background: var(--sa-success-soft); color: var(--sa-success); }
+    .stat-icon.absent  { background: var(--sa-danger-soft);  color: var(--sa-danger); }
+
+    .stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--sa-text); }
+    .stat-label { font-size: 0.78rem; color: var(--sa-muted); }
+
+    /* ===== Progress ===== */
+    .progress-wrap {
+        background: var(--sa-card);
+        border: 1px solid var(--sa-border);
+        border-radius: var(--sa-radius-sm);
+        padding: 0.9rem 1.15rem;
+        margin: 0.75rem 0 1.25rem;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+    }
+
+    .progress-top {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        color: var(--sa-muted);
+        margin-bottom: 0.5rem;
+    }
+    .progress-top strong { color: var(--sa-text); }
+
+    .progress-track {
+        height: 10px;
+        border-radius: 999px;
+        background: var(--sa-danger-soft);
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        width: 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #8b6cf5, #6d4ee3);
+    }
+
+    /* ===== Hint ===== */
+    .mark-hint {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: var(--sa-primary-soft);
+        color: var(--sa-primary-dark);
+        border-radius: var(--sa-radius-sm);
+        padding: 0.65rem 1rem;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    /* ===== Roll grid ===== */
+    .roll-grid-card {
+        background: var(--sa-card);
+        border: 1px solid var(--sa-border);
+        border-radius: var(--sa-radius);
+        padding: 1.25rem;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        margin-bottom: 1rem;
+    }
+
+    .roll-grid-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .roll-grid-head h2 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--sa-text);
+    }
+
+    .btn-soft {
+        border: 1px solid var(--sa-border);
+        background: #faf9ff;
+        color: var(--sa-primary-dark);
+        font-weight: 600;
+        font-size: 0.85rem;
+        border-radius: 0.75rem;
+        padding: 0.4rem 0.9rem;
+        transition: background 0.2s ease;
+    }
+    .btn-soft:hover { background: var(--sa-primary-soft); color: var(--sa-primary-dark); }
+
+    .roll-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.1rem;
+        width: 100%;
+        padding: 0.7rem 0.4rem;
+        border-radius: var(--sa-radius-sm);
+        border: 1.5px solid #cfeedd;
+        background: var(--sa-success-soft);
+        color: var(--sa-text);
+        cursor: pointer;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .roll-card .roll-no {
+        font-weight: 800;
+        font-size: 1.05rem;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .roll-card .roll-status {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .roll-card .st-present { color: var(--sa-success); }
+    .roll-card .st-absent  { display: none; }
+
+    .roll-card:hover {
+        border-color: var(--sa-primary);
+        box-shadow: 0 6px 16px rgba(124, 92, 240, 0.18);
+    }
+
+    /* Checked = ABSENT (red) */
+    .btn-check:checked + .roll-card {
+        background: linear-gradient(145deg, #ee5b60, var(--sa-danger-dark));
+        border-color: var(--sa-danger-dark);
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(229, 72, 77, 0.35);
+    }
+    .btn-check:checked + .roll-card .st-present { display: none; }
+    .btn-check:checked + .roll-card .st-absent  { display: inline; color: #fff; }
+
+    .btn-check:focus-visible + .roll-card {
+        outline: 3px solid rgba(124, 92, 240, 0.45);
+        outline-offset: 2px;
+    }
+
+    /* ===== Sticky submit bar ===== */
+    .submit-bar {
+        position: sticky;
+        bottom: 1rem;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--sa-border);
+        border-radius: var(--sa-radius);
+        box-shadow: 0 18px 40px -10px rgba(99, 66, 216, 0.3);
+        padding: 0.85rem 1.1rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .submit-summary { font-size: 0.95rem; color: var(--sa-muted); }
+    .submit-summary strong { color: var(--sa-text); }
+
+    .btn-submit {
+        border: none;
+        color: #fff;
+        font-weight: 700;
+        border-radius: var(--sa-radius-sm);
+        padding: 0.7rem 1.6rem;
+        background: linear-gradient(135deg, var(--sa-primary), var(--sa-primary-dark));
+        box-shadow: 0 10px 22px rgba(124, 92, 240, 0.35);
+    }
+    .btn-submit:hover,
+    .btn-submit:focus { color: #fff; background: linear-gradient(135deg, #8a6cf7, #5a3acb); }
+
+    /* ===== Empty state ===== */
+    .empty-card {
+        background: var(--sa-card);
+        border: 1px solid var(--sa-border);
+        border-radius: var(--sa-radius);
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+    }
+    .empty-card .empty-icon {
+        width: 64px; height: 64px;
+        margin: 0 auto 1rem;
+        border-radius: 1.1rem;
+        background: var(--sa-primary-soft);
+        color: var(--sa-primary);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .empty-card a { color: var(--sa-primary-dark); font-weight: 600; }
+
+    /* Hidden until Anime.js reveals them (noscript fallback below) */
+    [data-anim] { opacity: 0; }
+
+    @@media (max-width: 575.98px) {
+        .mark-banner { padding: 1.4rem 1.25rem; }
+        .mark-banner h1 { font-size: 1.35rem; }
+        .submit-bar { bottom: 0.5rem; }
+        .btn-submit { width: 100%; }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        [data-anim] { opacity: 1 !important; transform: none !important; }
+    }
+</style>
+
+<noscript>
+    <style>
+        [data-anim] { opacity: 1 !important; }
+    </style>
+</noscript>
+
+<div class="mark-banner" data-anim>
+    <span class="deco deco-1"></span>
+    <span class="deco deco-2"></span>
+    <h1>@Model.Subject</h1>
+    <div class="meta-chips">
+        <span class="meta-chip">
+            <i class="bi bi-people" aria-hidden="true"></i>@Model.ClassLabel
+        </span>
+        <span class="meta-chip">
+            <i class="bi bi-person-badge" aria-hidden="true"></i>@Model.Teacher
+        </span>
+        <span class="meta-chip">
+            <i class="bi bi-calendar3" aria-hidden="true"></i>@Model.Date.ToString("dd MMM yyyy")
+        </span>
+    </div>
+</div>
+
+@if (Model.Students.Count == 0)
+{
+    <div class="empty-card" data-anim role="alert">
+        <div class="empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+        </div>
+        <h2 class="h5 fw-bold mb-1">No active students in this class</h2>
+        <p class="text-muted mb-0">
+            <a asp-controller="Students" asp-action="Index">Add students</a> to start marking attendance.
+        </p>
+    </div>
+}
+else
+{
+    <form id="markForm" asp-action="Mark" method="post" class="js-loading-form">
+        <input type="hidden" name="assignmentId" value="@Model.AssignmentId" />
+        <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+
+        <!-- Stat cards -->
+        <div class="row g-2 g-md-3">
+            <div class="col-4" data-anim>
+                <div class="stat-card">
+                    <span class="stat-icon total"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                    <div>
+                        <div class="stat-value">@Model.Students.Count</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4" data-anim>
+                <div class="stat-card">
+                    <span class="stat-icon present"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></span>
+                    <div>
+                        <div class="stat-value" id="presentCount">0</div>
+                        <div class="stat-label">Present</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4" data-anim>
+                <div class="stat-card">
+                    <span class="stat-icon absent"><i class="bi bi-x-circle-fill" aria-hidden="true"></i></span>
+                    <div>
+                        <div class="stat-value" id="absentCount">0</div>
+                        <div class="stat-label">Absent</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-wrap" data-anim>
+            <div class="progress-top">
+                <span>Attendance rate</span>
+                <strong><span id="rateValue">0</span>%</strong>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="mark-hint" role="note" data-anim>
+            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+            <span>Everyone is <strong>present</strong> by default. <strong>Tap a roll number to mark it absent</strong> (it turns red).</span>
+        </div>
+
+        <!-- Roll grid -->
+        <div class="roll-grid-card" data-anim>
+            <div class="roll-grid-head">
+                <h2>Students</h2>
+                <button type="button" class="btn-soft" id="resetAll">
+                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Reset all to present
+                </button>
+            </div>
+
+            <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-6 g-2" id="rollGrid">
+                @foreach (var s in Model.Students)
+                {
+                    <div class="col">
+                        <input type="checkbox" class="btn-check absent-box" name="absentIds" value="@s.Id"
+                               id="st_@s.Id" @(s.IsAbsent ? "checked" : "") autocomplete="off" />
+
+                        <label class="roll-card" for="st_@s.Id" title="@s.Name">
+                            <span class="roll-no">@s.Roll</span>
+                            <span class="roll-status st-present">Present</span>
+                            <span class="roll-status st-absent">Absent</span>
+                        </label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Sticky submit bar -->
+        <div class="submit-bar" data-anim>
+            <div class="submit-summary">
+                Total <strong>@Model.Students.Count</strong> &middot;
+                Present <strong class="text-success" id="presentCountBar">0</strong> &middot;
+                Absent <strong class="text-danger" id="absentCountBar">0</strong>
+            </div>
+            <button type="submit" class="btn btn-submit">
+                <i class="bi bi-send-check me-1" aria-hidden="true"></i>@(Model.IsEdit ? "Save changes" : "Submit attendance")
+            </button>
+        </div>
+    </form>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    <script>
+        (function () {
+            var form = document.getElementById('markForm');
+            var hasAnime = typeof anime !== 'undefined' &&
+                !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function showAll() {
+                document.querySelectorAll('[data-anim]').forEach(function (el) {
+                    el.style.opacity = 1;
+                    el.style.transform = 'none';
+                });
+            }
+
+            if (!form) {
+                if (hasAnime) {
+                    anime({ targets: '[data-anim]', opacity: [0, 1], translateY: [24, 0],
+                            delay: anime.stagger(100), duration: 700, easing: 'easeOutExpo' });
+                } else { showAll(); }
+                return;
+            }
+
+            var total = @Model.Students.Count;
+
+            var presentEls = [document.getElementById('presentCount'), document.getElementById('presentCountBar')];
+            var absentEls  = [document.getElementById('absentCount'),  document.getElementById('absentCountBar')];
+            var rateEl     = document.getElementById('rateValue');
+            var fillEl     = document.getElementById('progressFill');
+
+            var shown = { present: 0, absent: 0, rate: 0 };
+
+            function setText(els, value) {
+                els.forEach(function (el) { el.textContent = value; });
+            }
+
+            function tween(key, to, apply) {
+                if (!hasAnime) { shown[key] = to; apply(to); return; }
+                var obj = { v: shown[key] };
+                anime.remove(obj);
+                anime({
+                    targets: obj, v: to, round: 1, duration: 450, easing: 'easeOutQuad',
+                    update: function () { shown[key] = obj.v; apply(obj.v); }
+                });
+            }
+
+            function update(animate) {
+                var absent = form.querySelectorAll('.absent-box:checked').length;
+                var present = total - absent;
+                var rate = total === 0 ? 0 : Math.round((present / total) * 100);
+
+                if (animate === false || !hasAnime) {
+                    shown.present = present; shown.absent = absent; shown.rate = rate;
+                    setText(presentEls, present);
+                    setText(absentEls, absent);
+                    rateEl.textContent = rate;
+                    fillEl.style.width = rate + '%';
+                } else {
+                    tween('present', present, function (v) { setText(presentEls, v); });
+                    tween('absent', absent, function (v) { setText(absentEls, v); });
+                    tween('rate', rate, function (v) { rateEl.textContent = v; });
+                    anime.remove(fillEl);
+                    anime({ targets: fillEl, width: rate + '%', duration: 500, easing: 'easeOutQuad' });
+                }
+
+                form.setAttribute('data-confirm',
+                    'Total ' + total + ': ' + present + ' present, ' + absent + ' absent. Submit this attendance?');
+            }
+
+            // Initial values (no animation yet, the entrance timeline handles it)
+            update(false);
+
+            form.addEventListener('change', function (e) {
+                update(true);
+                if (hasAnime && e.target.classList && e.target.classList.contains('absent-box')) {
+                    var card = e.target.nextElementSibling;
+                    anime.remove(card);
+                    anime({
+                        targets: card,
+                        scale: [0.88, 1],
+                        duration: 450,
+                        easing: 'easeOutElastic(1, .6)'
+                    });
+                }
+            });
+
+            document.getElementById('resetAll').addEventListener('click', function () {
+                var boxes = form.querySelectorAll('.absent-box:checked');
+                boxes.forEach(function (b) { b.checked = false; });
+                update(true);
+                if (hasAnime && boxes.length) {
+                    anime({
+                        targets: Array.prototype.map.call(boxes, function (b) { return b.nextElementSibling; }),
+                        scale: [0.9, 1],
+                        delay: anime.stagger(25),
+                        duration: 400,
+                        easing: 'easeOutBack'
+                    });
+                }
+            });
+
+            // Entrance animation
+            if (!hasAnime) { showAll(); return; }
+
+            var tl = anime.timeline({ easing: 'easeOutExpo' });
+            tl.add({
+                targets: '.mark-banner',
+                opacity: [0, 1], translateY: [-24, 0], duration: 700
+            })
+            .add({
+                targets: '.stat-card',
+                opacity: [0, 1], translateY: [24, 0],
+                delay: anime.stagger(100), duration: 600
+            }, '-=400')
+            .add({
+                targets: '.progress-wrap, .mark-hint, .roll-grid-card, .submit-bar',
+                opacity: [0, 1], translateY: [20, 0],
+                delay: anime.stagger(90), duration: 600
+            }, '-=400')
+            .add({
+                targets: '#rollGrid .roll-card',
+                opacity: [0, 1], scale: [0.8, 1],
+                delay: anime.stagger(25, { grid: [6, Math.ceil(total / 6)], from: 'first' }),
+                duration: 450, easing: 'easeOutBack'
+            }, '-=500');
+
+            // The wrapper columns also carry data-anim, so make sure they end visible
+            tl.finished.then(function () {
+                document.querySelectorAll('[data-anim]').forEach(function (el) { el.style.opacity = 1; });
+            });
+
+            // Re-run the numbers once so they count up with the entrance
+            setTimeout(function () {
+                shown.present = 0; shown.absent = 0; shown.rate = 0;
+                setText(presentEls, 0); setText(absentEls, 0); rateEl.textContent = 0;
+                fillEl.style.width = '0%';
+                update(true);
+            }, 500);
         })();
     </script>
 }
