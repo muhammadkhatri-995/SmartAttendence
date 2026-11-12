@@ -6,173 +6,186 @@
     var waUrl = (Model.WhatsAppUrl ?? string.Empty).Replace("wa.me/+", "wa.me/");
     var hasUrl = !string.IsNullOrWhiteSpace(waUrl);
     var absent = Model.Total - Model.Present;
+    var rate = Model.Total > 0 ? (int)Math.Round(Model.Present * 100.0 / Model.Total) : 0;
 }
 
-<div id="toastBox" class="position-fixed top-0 end-0 p-3" style="z-index: 2000;"></div>
+<style>
+    /* Colours come from the layout tokens. The fallbacks only apply if a token is missing. */
 
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-
-        <div class="card shadow-sm mb-3">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <i class="bi bi-check-circle-fill text-success fs-3"></i>
-                    <h4 class="mb-0">Attendance saved</h4>
-                </div>
-
-                <div class="row g-3 mb-3">
-                    <div class="col-sm-6">
-                        <div class="text-muted small">Class</div>
-                        <div class="fw-semibold">@Model.ClassLabel</div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="text-muted small">Date</div>
-                        <div class="fw-semibold">@Model.Date.ToString("dddd, dd MMMM yyyy")</div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="text-muted small">Subject</div>
-                        <div class="fw-semibold">@Model.Subject</div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="text-muted small">Teacher</div>
-                        <div class="fw-semibold">@Model.Teacher</div>
-                    </div>
-                </div>
-
-                <div class="d-flex flex-wrap gap-2 mb-3">
-                    <span class="badge bg-primary fs-6">Total: @Model.Total</span>
-                    <span class="badge bg-success fs-6">Present: @Model.Present</span>
-                    <span class="badge bg-danger fs-6">Absent: @absent</span>
-                </div>
-
-                @if (Model.AbsentRolls.Count > 0)
-                {
-                    <div class="mb-1 text-muted small">Absent roll numbers</div>
-                    <div class="d-flex flex-wrap gap-1">
-                        @foreach (var roll in Model.AbsentRolls)
-                        {
-                            <span class="badge text-bg-light border">@roll</span>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="text-success">Everyone was present.</div>
-                }
-            </div>
-        </div>
-
-        <div class="card shadow-sm mb-3">
-            <div class="card-body p-4">
-                <h6 class="mb-2">Message for @Model.Teacher</h6>
-                <textarea id="msg" class="form-control mb-3" rows="6" readonly>@Model.Message</textarea>
-
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" id="copyBtn" class="btn btn-outline-primary btn-lg">
-                        <i class="bi bi-clipboard"></i> Copy message
-                    </button>
-
-                    @if (hasUrl)
-                    {
-                        <a id="openWa" href="@waUrl" target="_blank" rel="noopener" class="btn btn-success btn-lg">
-                            <i class="bi bi-whatsapp"></i> Open WhatsApp
-                        </a>
-                    }
-                </div>
-
-                @if (!hasUrl)
-                {
-                    <div class="alert alert-warning mt-3 mb-0" data-keep="true">
-                        This teacher has no valid WhatsApp number. Add it under Teachers, then open this page again.
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="d-flex gap-2">
-            <a asp-controller="Attendance" asp-action="Index" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")"
-               class="btn btn-outline-secondary">Back to lectures</a>
-            <a asp-controller="Attendance" asp-action="History" class="btn btn-outline-secondary">History</a>
-        </div>
-    </div>
-</div>
-
-<script>
-        (function () {
-            var HIDE_AFTER_MS = 2000;
-            var box = document.getElementById('toastBox');
-
-            // Small notification that removes itself after 2 seconds.
-            function showToast(text) {
-                if (!box) return;
-                var t = document.createElement('div');
-                t.className = 'bg-dark text-white rounded shadow px-3 py-2 mb-2';
-                t.style.transition = 'opacity .4s';
-                t.textContent = text;
-                box.appendChild(t);
-                setTimeout(function () {
-                    t.style.opacity = '0';
-                    setTimeout(function () { t.remove(); }, 400);
-                }, HIDE_AFTER_MS);
-            }
-
-            // Hide the layout's alerts (for example "Attendance saved") after 2 seconds.
-            setTimeout(function () {
-                document.querySelectorAll('.alert:not([data-keep])').forEach(function (a) {
-                    a.style.transition = 'opacity .4s';
-                    a.style.opacity = '0';
-                    setTimeout(function () { a.remove(); }, 400);
-                });
-            }, HIDE_AFTER_MS);
-
-            // Copy the message.
-            var msg = document.getElementById('msg');
-            var copyBtn = document.getElementById('copyBtn');
-
-            function copyText(text) {
-                if (navigator.clipboard && window.isSecureContext) {
-                    return navigator.clipboard.writeText(text);
-                }
-                return new Promise(function (resolve, reject) {
-                    try {
-                        msg.removeAttribute('readonly');
-                        msg.select();
-                        var ok = document.execCommand('copy');
-                        msg.setAttribute('readonly', '');
-                        msg.setSelectionRange(0, 0);
-                        ok ? resolve() : reject(new Error('copy failed'));
-                    } catch (e) {
-                        reject(e);
-                    }
-                });
-            }
-
-            if (copyBtn && msg) {
-                copyBtn.addEventListener('click', function () {
-                    copyText(msg.value)
-                        .then(function () { showToast('Message copied'); })
-                        .catch(function () { showToast('Could not copy. Select the text and press Ctrl+C.'); });
-                });
-            }
-
-    @if (hasUrl)
-    {
-        <text>
-                    // Open WhatsApp once per saved attendance, so pressing Back does not reopen it.
-                    var url = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(waUrl));
-                    var key = "wa-opened-@Model.AssignmentId-@Model.Date.ToString("yyyyMMdd")";
-
-                    var alreadyOpened = false;
-                    try { alreadyOpened = sessionStorage.getItem(key) === '1'; } catch (e) { }
-
-                    if (!alreadyOpened) {
-                        showToast('Opening WhatsApp...');
-                        setTimeout(function () {
-                            try { sessionStorage.setItem(key, '1'); } catch (e) { }
-                            window.location.href = url;
-                        }, HIDE_AFTER_MS);
-                    }
-        </text>
+    /* ===== Success banner ===== */
+    .res-banner {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--sa-radius, 1.5rem);
+        padding: 1.75rem 2rem;
+        color: #fff;
+        background: linear-gradient(145deg, #8b6cf5 0%, #6d4ee3 60%, #5b3fd0 100%);
+        box-shadow: var(--sa-shadow, 0 20px 40px -15px rgba(99, 66, 216, 0.22));
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1.1rem;
     }
-        })();
-</script>
+
+    .res-banner .deco {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        pointer-events: none;
+    }
+    .res-banner .deco-1 { width: 240px; height: 240px; top: -90px; right: -60px; }
+    .res-banner .deco-2 { width: 150px; height: 150px; bottom: -70px; right: 180px; }
+
+    .res-check {
+        position: relative;
+        z-index: 1;
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
+        border-radius: 1.2rem;
+        background: #fff;
+        color: var(--sa-success, #16a34a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        box-shadow: 0 10px 24px rgba(30, 20, 90, 0.3);
+    }
+
+    .res-banner-main { position: relative; z-index: 1; min-width: 0; }
+
+    .res-banner h1 {
+        font-size: 1.6rem;
+        font-weight: 800;
+        margin: 0 0 0.6rem;
+        color: #fff;
+    }
+
+    .meta-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    .meta-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #fff;
+        border-radius: 999px;
+        padding: 0.3rem 0.85rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        max-width: 100%;
+    }
+
+    /* ===== Stat cards ===== */
+    .stat-col { min-width: 0; }
+
+    .stat-card {
+        background: var(--sa-card, #ffffff);
+        border-radius: var(--sa-radius-sm, 0.9rem);
+        padding: 1rem 1.15rem;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        border: 1px solid var(--sa-border, #e3def7);
+        height: 100%;
+        min-width: 0;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .stat-icon.total   { background: var(--sa-primary-soft, #efeafe); color: var(--sa-primary, #7c5cf0); }
+    .stat-icon.present { background: var(--sa-success-soft, #e8f8ef); color: var(--sa-success, #16a34a); }
+    .stat-icon.absent  { background: var(--sa-danger-soft, #fdecee);  color: var(--sa-danger, #e5484d); }
+
+    .stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--sa-text, #1e1b3a); }
+    .stat-label { font-size: 0.78rem; color: var(--sa-muted, #7b7894); }
+
+    /* ===== Generic white card ===== */
+    .res-card {
+        background: var(--sa-card, #ffffff);
+        border: 1px solid var(--sa-border, #e3def7);
+        border-radius: var(--sa-radius, 1.5rem);
+        padding: 1.25rem;
+        box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        margin-bottom: 1rem;
+    }
+
+    .res-card h2 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0 0 0.9rem;
+        color: var(--sa-text, #1e1b3a);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .res-card h2 i { color: var(--sa-primary, #7c5cf0); }
+
+    /* ===== Progress ===== */
+    .progress-top {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        color: var(--sa-muted, #7b7894);
+        margin-bottom: 0.5rem;
+    }
+    .progress-top strong { color: var(--sa-text, #1e1b3a); }
+
+    .progress-track {
+        height: 10px;
+        border-radius: 999px;
+        background: var(--sa-danger-soft, #fdecee);
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        width: 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #34c47a, #16a34a);
+    }
+
+    /* ===== Absent rolls ===== */
+    .roll-chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 0.75rem;
+        padding: 0.35rem 0.8rem;
+        font-weight: 700;
+        font-size: 0.9rem;
+        background: var(--sa-danger-soft, #fdecee);
+        color: var(--sa-danger-dark, #cf3a40);
+        border: 1px solid rgba(229, 72, 77, 0.25);
+    }
+
+    .all-present {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--sa-success-soft, #e8f8ef);
+        color: var(--sa-success, #16a34a);
+        border-radius: var(--sa-radius-sm, 0.9rem);
+        padding: 0.7rem 1rem;
+        font-weight: 600;
+    }
+
+    .res-label { font-size: 0.78rem; color: var(--sa-muted, #7b7894); margin-bottom: 0.5rem; font-weight: 600; }
+
+    /* ===== Message ===== */
+    .msg-box {
+        width: 100%;
+        resize: vertical;
+        min-height: 150px;
+        border: 1.5px solid var(--sa-border, #e3def7);
+        background: var(--sa-input-bg, #faf9ff);
+        color: var(--sa-text, #1e1b3a);
