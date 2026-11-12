@@ -1,134 +1,20 @@
-﻿@* @model MarkViewModel
-@{
-    ViewData["Title"] = "Mark attendance";
-}
-
-<div class="page-header mb-3">
-    <h1 class="h4 mb-1">@Model.Subject</h1>
-    <p class="text-muted mb-0">@Model.ClassLabel &middot; @Model.Teacher &middot; @Model.Date.ToString("dd MMM yyyy")</p>
-</div>
-
-@if (Model.Students.Count == 0)
-{
-    <div class="alert alert-warning" role="alert">
-        No active students in this class. <a asp-controller="Students" asp-action="Index">Add students</a>
-    </div>
-}
-else
-{
-    <form id="markForm" asp-action="Mark" method="post" class="js-loading-form">
-        <input type="hidden" name="assignmentId" value="@Model.AssignmentId" />
-        <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" />
-
-        <div class="alert alert-info py-2" role="note">
-            Everyone is <strong>present</strong> by default. <strong>Tap a roll number to mark it absent</strong> (it turns red).
-        </div>
-
-        <!-- Attendance Grid Layout -->
-        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-2 mb-4">
-            @foreach (var s in Model.Students)
-            {
-                <div class="col">
-                    <input type="checkbox" class="btn-check absent-box" name="absentIds" value="@s.Id"
-                           id="st_@s.Id" @(s.IsAbsent ? "checked" : "") autocomplete="off" />
-                    
-                    <label class="btn btn-outline-success w-100 py-2 fw-semibold text-truncate roll-card" 
-                           for="st_@s.Id" title="@s.Name">
-                        @s.Roll
-                    </label>
-                </div>
-            }
-        </div>
-
-        <div class="card shadow-sm border mb-3">
-            <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
-                <div class="fs-6">
-                    Total <strong>@Model.Students.Count</strong> &middot;
-                    Present <strong id="presentCount" class="text-success">0</strong> &middot;
-                    Absent <strong id="absentCount" class="text-danger">0</strong>
-                </div>
-                <button type="submit" class="btn btn-primary px-4">
-                    <i class="bi bi-send-check me-1" aria-hidden="true"></i>@(Model.IsEdit ? "Save changes" : "Submit attendance")
-                </button>
-            </div>
-        </div>
-    </form>
-}
-
-<style>
-    /* Checkbox checked state turns background RED (Absent) */
-    .btn-check:checked + .btn-outline-success {
-        background-color: #dc3545 !important;
-        border-color: #dc3545 !important;
-        color: #ffffff !important;
-    }
-    
-    .roll-card {
-        user-select: none;
-        transition: all 0.15s ease-in-out;
-        font-size: 0.95rem;
-    }
-
-    .roll-card:hover {
-        transform: translateY(-1px);
-    }
-</style>
-
-@section Scripts {
-    <script>
-        (function () {
-            var form = document.getElementById('markForm');
-            if (!form) { return; }
-            var total = @Model.Students.Count;
-
-            function update() {
-                var absent = form.querySelectorAll('.absent-box:checked').length;
-                document.getElementById('absentCount').textContent = absent;
-                document.getElementById('presentCount').textContent = total - absent;
-                form.setAttribute('data-confirm',
-                    'Total ' + total + ': ' + (total - absent) + ' present, ' + absent + ' absent. Submit this attendance?');
-            }
-
-            form.addEventListener('change', update);
-            update();
-        })();
-    </script>
-} *@
-@model MarkViewModel
+﻿@model MarkViewModel
 @{
     ViewData["Title"] = "Mark attendance";
 }
 
 <style>
-    /* ===== Portal design tokens (move to site.css once, then delete this block) ===== */
-    :root {
-        --sa-primary: #7c5cf0;
-        --sa-primary-dark: #6342d8;
-        --sa-primary-soft: #efeafe;
-        --sa-bg: #f1eefc;
-        --sa-card: #ffffff;
-        --sa-text: #1e1b3a;
-        --sa-muted: #7b7894;
-        --sa-border: #e3def7;
-        --sa-success: #16a34a;
-        --sa-success-soft: #e8f8ef;
-        --sa-danger: #e5484d;
-        --sa-danger-dark: #cf3a40;
-        --sa-danger-soft: #fdecee;
-        --sa-radius: 1.5rem;
-        --sa-radius-sm: 0.9rem;
-        --sa-shadow: 0 20px 40px -15px rgba(99, 66, 216, 0.22);
-    }
+    /* Tokens come from site.css (light or dark). The fallbacks below only apply if a token is missing. */
 
-    /* ===== Header banner (like "Welcome back, John!") ===== */
+    /* ===== Header banner ===== */
     .mark-banner {
         position: relative;
         overflow: hidden;
-        border-radius: var(--sa-radius);
+        border-radius: var(--sa-radius, 1.5rem);
         padding: 1.75rem 2rem;
         color: #fff;
         background: linear-gradient(145deg, #8b6cf5 0%, #6d4ee3 60%, #5b3fd0 100%);
-        box-shadow: var(--sa-shadow);
+        box-shadow: var(--sa-shadow, 0 20px 40px -15px rgba(99, 66, 216, 0.22));
         margin-bottom: 1.25rem;
     }
 
@@ -147,6 +33,7 @@ else
         font-size: 1.6rem;
         font-weight: 800;
         margin: 0 0 0.75rem;
+        overflow-wrap: anywhere;
     }
 
     .meta-chips {
@@ -171,16 +58,19 @@ else
     }
 
     /* ===== Stat cards ===== */
+    .stat-col { min-width: 0; }
+
     .stat-card {
-        background: var(--sa-card);
-        border-radius: var(--sa-radius-sm);
+        background: var(--sa-card, #ffffff);
+        border-radius: var(--sa-radius-sm, 0.9rem);
         padding: 1rem 1.15rem;
         display: flex;
         align-items: center;
         gap: 0.9rem;
         box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
-        border: 1px solid var(--sa-border);
+        border: 1px solid var(--sa-border, #e3def7);
         height: 100%;
+        min-width: 0;
     }
 
     .stat-icon {
@@ -192,18 +82,18 @@ else
         justify-content: center;
         flex-shrink: 0;
     }
-    .stat-icon.total   { background: var(--sa-primary-soft); color: var(--sa-primary); }
-    .stat-icon.present { background: var(--sa-success-soft); color: var(--sa-success); }
-    .stat-icon.absent  { background: var(--sa-danger-soft);  color: var(--sa-danger); }
+    .stat-icon.total   { background: var(--sa-primary-soft, #efeafe); color: var(--sa-primary, #7c5cf0); }
+    .stat-icon.present { background: var(--sa-success-soft, #e8f8ef); color: var(--sa-success, #16a34a); }
+    .stat-icon.absent  { background: var(--sa-danger-soft, #fdecee);  color: var(--sa-danger, #e5484d); }
 
-    .stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--sa-text); }
-    .stat-label { font-size: 0.78rem; color: var(--sa-muted); }
+    .stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--sa-text, #1e1b3a); }
+    .stat-label { font-size: 0.78rem; color: var(--sa-muted, #7b7894); }
 
     /* ===== Progress ===== */
     .progress-wrap {
-        background: var(--sa-card);
-        border: 1px solid var(--sa-border);
-        border-radius: var(--sa-radius-sm);
+        background: var(--sa-card, #ffffff);
+        border: 1px solid var(--sa-border, #e3def7);
+        border-radius: var(--sa-radius-sm, 0.9rem);
         padding: 0.9rem 1.15rem;
         margin: 0.75rem 0 1.25rem;
         box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
@@ -213,15 +103,15 @@ else
         display: flex;
         justify-content: space-between;
         font-size: 0.82rem;
-        color: var(--sa-muted);
+        color: var(--sa-muted, #7b7894);
         margin-bottom: 0.5rem;
     }
-    .progress-top strong { color: var(--sa-text); }
+    .progress-top strong { color: var(--sa-text, #1e1b3a); }
 
     .progress-track {
         height: 10px;
         border-radius: 999px;
-        background: var(--sa-danger-soft);
+        background: var(--sa-danger-soft, #fdecee);
         overflow: hidden;
     }
 
@@ -235,21 +125,22 @@ else
     /* ===== Hint ===== */
     .mark-hint {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 0.6rem;
-        background: var(--sa-primary-soft);
-        color: var(--sa-primary-dark);
-        border-radius: var(--sa-radius-sm);
+        background: var(--sa-primary-soft, #efeafe);
+        color: var(--sa-primary-dark, #6342d8);
+        border-radius: var(--sa-radius-sm, 0.9rem);
         padding: 0.65rem 1rem;
         font-size: 0.9rem;
         margin-bottom: 1rem;
     }
+    .mark-hint i { margin-top: 0.15rem; }
 
     /* ===== Roll grid ===== */
     .roll-grid-card {
-        background: var(--sa-card);
-        border: 1px solid var(--sa-border);
-        border-radius: var(--sa-radius);
+        background: var(--sa-card, #ffffff);
+        border: 1px solid var(--sa-border, #e3def7);
+        border-radius: var(--sa-radius, 1.5rem);
         padding: 1.25rem;
         box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
         margin-bottom: 1rem;
@@ -268,46 +159,49 @@ else
         font-size: 1.05rem;
         font-weight: 700;
         margin: 0;
-        color: var(--sa-text);
+        color: var(--sa-text, #1e1b3a);
     }
 
     .btn-soft {
-        border: 1px solid var(--sa-border);
-        background: #faf9ff;
-        color: var(--sa-primary-dark);
+        border: 1px solid var(--sa-border, #e3def7);
+        background: var(--sa-primary-soft, #efeafe);
+        color: var(--sa-primary-dark, #6342d8);
         font-weight: 600;
         font-size: 0.85rem;
         border-radius: 0.75rem;
         padding: 0.4rem 0.9rem;
-        transition: background 0.2s ease;
+        transition: filter 0.2s ease;
     }
-    .btn-soft:hover { background: var(--sa-primary-soft); color: var(--sa-primary-dark); }
+    .btn-soft:hover { filter: brightness(0.96); color: var(--sa-primary-dark, #6342d8); }
 
     .roll-card {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 0.1rem;
+        gap: 0.15rem;
         width: 100%;
-        padding: 0.7rem 0.4rem;
-        border-radius: var(--sa-radius-sm);
-        border: 1.5px solid #cfeedd;
-        background: var(--sa-success-soft);
-        color: var(--sa-text);
+        min-height: 66px;
+        padding: 0.7rem 0.5rem;
+        border-radius: var(--sa-radius-sm, 0.9rem);
+        border: 1.5px solid rgba(22, 163, 74, 0.35);
+        background: var(--sa-success-soft, #e8f8ef);
+        color: var(--sa-text, #1e1b3a);
         cursor: pointer;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
         transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
     }
 
+    /* Full roll number is always shown: it wraps instead of being cut with "..." */
     .roll-card .roll-no {
         font-weight: 800;
-        font-size: 1.05rem;
+        font-size: 1rem;
+        line-height: 1.2;
+        text-align: center;
         max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
     .roll-card .roll-status {
@@ -317,18 +211,18 @@ else
         letter-spacing: 0.04em;
     }
 
-    .roll-card .st-present { color: var(--sa-success); }
+    .roll-card .st-present { color: var(--sa-success, #16a34a); }
     .roll-card .st-absent  { display: none; }
 
     .roll-card:hover {
-        border-color: var(--sa-primary);
+        border-color: var(--sa-primary, #7c5cf0);
         box-shadow: 0 6px 16px rgba(124, 92, 240, 0.18);
     }
 
     /* Checked = ABSENT (red) */
     .btn-check:checked + .roll-card {
-        background: linear-gradient(145deg, #ee5b60, var(--sa-danger-dark));
-        border-color: var(--sa-danger-dark);
+        background: linear-gradient(145deg, #ee5b60, #cf3a40);
+        border-color: #cf3a40;
         color: #fff;
         box-shadow: 0 8px 18px rgba(229, 72, 77, 0.35);
     }
@@ -345,10 +239,9 @@ else
         position: sticky;
         bottom: 1rem;
         z-index: 10;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(8px);
-        border: 1px solid var(--sa-border);
-        border-radius: var(--sa-radius);
+        background: var(--sa-card, #ffffff);
+        border: 1px solid var(--sa-border, #e3def7);
+        border-radius: var(--sa-radius, 1.5rem);
         box-shadow: 0 18px 40px -10px rgba(99, 66, 216, 0.3);
         padding: 0.85rem 1.1rem;
         display: flex;
@@ -358,16 +251,18 @@ else
         gap: 0.75rem;
     }
 
-    .submit-summary { font-size: 0.95rem; color: var(--sa-muted); }
-    .submit-summary strong { color: var(--sa-text); }
+    .submit-summary { font-size: 0.95rem; color: var(--sa-muted, #7b7894); }
+    .submit-summary strong { color: var(--sa-text, #1e1b3a); }
+    .submit-summary .text-success { color: var(--sa-success, #16a34a) !important; }
+    .submit-summary .text-danger  { color: var(--sa-danger, #e5484d) !important; }
 
     .btn-submit {
         border: none;
         color: #fff;
         font-weight: 700;
-        border-radius: var(--sa-radius-sm);
+        border-radius: var(--sa-radius-sm, 0.9rem);
         padding: 0.7rem 1.6rem;
-        background: linear-gradient(135deg, var(--sa-primary), var(--sa-primary-dark));
+        background: linear-gradient(135deg, #7c5cf0, #6342d8);
         box-shadow: 0 10px 22px rgba(124, 92, 240, 0.35);
     }
     .btn-submit:hover,
@@ -375,30 +270,51 @@ else
 
     /* ===== Empty state ===== */
     .empty-card {
-        background: var(--sa-card);
-        border: 1px solid var(--sa-border);
-        border-radius: var(--sa-radius);
+        background: var(--sa-card, #ffffff);
+        border: 1px solid var(--sa-border, #e3def7);
+        border-radius: var(--sa-radius, 1.5rem);
         padding: 2.5rem 1.5rem;
         text-align: center;
         box-shadow: 0 8px 22px rgba(99, 66, 216, 0.08);
+        color: var(--sa-text, #1e1b3a);
     }
     .empty-card .empty-icon {
         width: 64px; height: 64px;
         margin: 0 auto 1rem;
         border-radius: 1.1rem;
-        background: var(--sa-primary-soft);
-        color: var(--sa-primary);
+        background: var(--sa-primary-soft, #efeafe);
+        color: var(--sa-primary, #7c5cf0);
         display: flex; align-items: center; justify-content: center;
     }
-    .empty-card a { color: var(--sa-primary-dark); font-weight: 600; }
+    .empty-card a { color: var(--sa-primary, #7c5cf0); font-weight: 600; }
 
     /* Hidden until Anime.js reveals them (noscript fallback below) */
     [data-anim] { opacity: 0; }
 
+    /* ===== Phones ===== */
     @@media (max-width: 575.98px) {
-        .mark-banner { padding: 1.4rem 1.25rem; }
-        .mark-banner h1 { font-size: 1.35rem; }
-        .submit-bar { bottom: 0.5rem; }
+        .mark-banner { padding: 1.25rem 1.1rem; }
+        .mark-banner h1 { font-size: 1.3rem; }
+        .meta-chip { font-size: 0.8rem; padding: 0.25rem 0.7rem; }
+
+        /* Stat cards: icon on top, centred, so three fit in one row */
+        .stat-card {
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            gap: 0.45rem;
+            padding: 0.8rem 0.35rem;
+        }
+        .stat-icon { width: 36px; height: 36px; border-radius: 0.7rem; }
+        .stat-value { font-size: 1.3rem; }
+        .stat-label { font-size: 0.72rem; }
+
+        .roll-grid-card { padding: 1rem 0.85rem; }
+        .roll-card { min-height: 62px; padding: 0.6rem 0.4rem; }
+        .roll-card .roll-no { font-size: 0.98rem; }
+
+        .submit-bar { bottom: 0.5rem; padding: 0.75rem 0.9rem; }
+        .submit-summary { width: 100%; text-align: center; font-size: 0.9rem; }
         .btn-submit { width: 100%; }
     }
 
@@ -442,7 +358,7 @@ else
             </svg>
         </div>
         <h2 class="h5 fw-bold mb-1">No active students in this class</h2>
-        <p class="text-muted mb-0">
+        <p class="mb-0" style="color: var(--sa-muted, #7b7894);">
             <a asp-controller="Students" asp-action="Index">Add students</a> to start marking attendance.
         </p>
     </div>
@@ -455,7 +371,7 @@ else
 
         <!-- Stat cards -->
         <div class="row g-2 g-md-3">
-            <div class="col-4" data-anim>
+            <div class="col-4 stat-col" data-anim>
                 <div class="stat-card">
                     <span class="stat-icon total"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
                     <div>
@@ -464,7 +380,7 @@ else
                     </div>
                 </div>
             </div>
-            <div class="col-4" data-anim>
+            <div class="col-4 stat-col" data-anim>
                 <div class="stat-card">
                     <span class="stat-icon present"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></span>
                     <div>
@@ -473,7 +389,7 @@ else
                     </div>
                 </div>
             </div>
-            <div class="col-4" data-anim>
+            <div class="col-4 stat-col" data-anim>
                 <div class="stat-card">
                     <span class="stat-icon absent"><i class="bi bi-x-circle-fill" aria-hidden="true"></i></span>
                     <div>
@@ -500,7 +416,7 @@ else
             <span>Everyone is <strong>present</strong> by default. <strong>Tap a roll number to mark it absent</strong> (it turns red).</span>
         </div>
 
-        <!-- Roll grid -->
+        <!-- Roll grid: 2 columns on phones so full roll numbers fit -->
         <div class="roll-grid-card" data-anim>
             <div class="roll-grid-head">
                 <h2>Students</h2>
@@ -509,7 +425,7 @@ else
                 </button>
             </div>
 
-            <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-6 g-2" id="rollGrid">
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-2" id="rollGrid">
                 @foreach (var s in Model.Students)
                 {
                     <div class="col">
@@ -609,7 +525,7 @@ else
                     'Total ' + total + ': ' + present + ' present, ' + absent + ' absent. Submit this attendance?');
             }
 
-            // Initial values (no animation yet, the entrance timeline handles it)
+            // Initial values (the entrance timeline handles the animation)
             update(false);
 
             form.addEventListener('change', function (e) {
@@ -644,13 +560,15 @@ else
             // Entrance animation
             if (!hasAnime) { showAll(); return; }
 
+            var cols = window.innerWidth < 576 ? 2 : (window.innerWidth < 768 ? 3 : 6);
+
             var tl = anime.timeline({ easing: 'easeOutExpo' });
             tl.add({
                 targets: '.mark-banner',
                 opacity: [0, 1], translateY: [-24, 0], duration: 700
             })
             .add({
-                targets: '.stat-card',
+                targets: '.stat-col',
                 opacity: [0, 1], translateY: [24, 0],
                 delay: anime.stagger(100), duration: 600
             }, '-=400')
@@ -662,16 +580,17 @@ else
             .add({
                 targets: '#rollGrid .roll-card',
                 opacity: [0, 1], scale: [0.8, 1],
-                delay: anime.stagger(25, { grid: [6, Math.ceil(total / 6)], from: 'first' }),
+                delay: anime.stagger(20, { grid: [cols, Math.ceil(total / cols)], from: 'first' }),
                 duration: 450, easing: 'easeOutBack'
             }, '-=500');
 
-            // The wrapper columns also carry data-anim, so make sure they end visible
+            // Safety net: make sure every block ends fully visible
             tl.finished.then(function () {
                 document.querySelectorAll('[data-anim]').forEach(function (el) { el.style.opacity = 1; });
+                document.querySelectorAll('#rollGrid .roll-card').forEach(function (el) { el.style.opacity = 1; });
             });
 
-            // Re-run the numbers once so they count up with the entrance
+            // Re-run the numbers so they count up with the entrance
             setTimeout(function () {
                 shown.present = 0; shown.absent = 0; shown.rate = 0;
                 setText(presentEls, 0); setText(absentEls, 0); rateEl.textContent = 0;
